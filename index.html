@@ -408,12 +408,21 @@
     </div>
     
     <script>
-        // Initialize Supabase
-        const SUPABASE_URL = 'sb_secret_J9DaM-I-vwIMixUY9iYRoQ_7peU4tuz';
-        const SUPABASE_ANON_KEY = 'sb_publishable_aUnVRzpP77mGGvGe1T17fg_zOtgkbro';
-        const supabase = supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        // ============================================
+        // STEP 1: UPDATE THESE WITH YOUR REAL VALUES
+        // ============================================
+        const SUPABASE_URL =  'https://ofxqmfaqkagilxuzyuwx.supabase.co';  
+        const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
         
-        // Form submission
+        // ============================================
+        // STEP 2: Don't change anything below this
+        // ============================================
+        
+        // Initialize Supabase client
+        const { createClient } = window.supabase;
+        const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        
+        // Form submission handler
         document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
@@ -421,11 +430,13 @@
             const successMsg = document.getElementById('successMessage');
             const errorMsg = document.getElementById('errorMessage');
             
-            // Disable button
+            // Disable button and show loading
             submitBtn.disabled = true;
             submitBtn.textContent = 'Creating your profile...';
             successMsg.style.display = 'none';
             errorMsg.style.display = 'none';
+            
+            console.log('Form submitted - starting process...');
             
             try {
                 // Get form data
@@ -459,36 +470,55 @@
                     profile_completion_date: new Date().toISOString()
                 };
                 
+                console.log('Profile data prepared:', profile);
+                
                 // Insert into Supabase
-                const { data, error } = await supabase
+                console.log('Saving to Supabase...');
+                const { data, error } = await supabaseClient
                     .from('user_profiles')
                     .insert([profile])
                     .select();
                 
-                if (error) throw error;
+                if (error) {
+                    console.error('Supabase error:', error);
+                    throw new Error(`Database error: ${error.message}`);
+                }
                 
-                // Success!
+                console.log('✅ Profile saved successfully:', data);
+                
+                // Show success message
                 successMsg.style.display = 'block';
                 e.target.reset();
-                
-                // Scroll to success message
                 successMsg.scrollIntoView({ behavior: 'smooth' });
                 
                 // Trigger n8n webhook for immediate matching
-                await fetch('https://richverra.app.n8n.cloud/webhook-test/profile-created', {
+                console.log('Triggering n8n webhook...');
+                const webhookResponse = await fetch('https://richverra.app.n8n.cloud/webhook-test/profile-created', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ user_id: data[0].id, email: profile.email })
+                    body: JSON.stringify({ 
+                        user_id: data[0].id, 
+                        email: profile.email,
+                        organization_name: profile.organization_name
+                    })
                 });
                 
+                if (webhookResponse.ok) {
+                    console.log('✅ n8n webhook triggered successfully!');
+                } else {
+                    console.warn('⚠️ n8n webhook responded with:', webhookResponse.status);
+                }
+                
             } catch (error) {
-                console.error('Error:', error);
-                errorMsg.textContent = 'Sorry, something went wrong. Please try again or contact support.';
+                console.error('❌ Error occurred:', error);
+                errorMsg.textContent = `Error: ${error.message}. Please try again or contact support.`;
                 errorMsg.style.display = 'block';
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create My Profile & Find Grants';
             }
         });
+        
+        console.log('✅ Form script loaded successfully');
     </script>
 </body>
 
