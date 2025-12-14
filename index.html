@@ -411,11 +411,11 @@
         // ============================================
         // STEP 1: UPDATE THESE WITH YOUR REAL VALUES
         // ============================================
-        const SUPABASE_URL =  'https://ofxqmfaqkagilxuzyuwx.supabase.co';  
+        const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';  
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
         
         // ============================================
-        // STEP 2: Don't change anything below this
+        // STEP 2: Initialize Supabase
         // ============================================
         
         // Initialize Supabase client
@@ -486,28 +486,16 @@
                 
                 console.log('✅ Profile saved successfully:', data);
                 
-                // Show success message
+                // Success! Show message
                 successMsg.style.display = 'block';
                 e.target.reset();
                 successMsg.scrollIntoView({ behavior: 'smooth' });
                 
-                // Trigger n8n webhook for immediate matching
-                console.log('Triggering n8n webhook...');
-                const webhookResponse = await fetch('https://richverra.app.n8n.cloud/webhook/profile-created', {
-                    method: 'POST',
-                    headers: { 'Content-Type': 'application/json' },
-                    body: JSON.stringify({ 
-                        user_id: data[0].id, 
-                        email: profile.email,
-                        organization_name: profile.organization_name
-                    })
-                });
+                console.log('✅ Profile created successfully!');
+                console.log('📧 Database trigger will automatically notify n8n for matching');
                 
-                if (webhookResponse.ok) {
-                    console.log('✅ n8n webhook triggered successfully!');
-                } else {
-                    console.warn('⚠️ n8n webhook responded with:', webhookResponse.status);
-                }
+                // Note: The database trigger automatically calls n8n webhook
+                // No need to make the webhook call from the form anymore!
                 
             } catch (error) {
                 console.error('❌ Error occurred:', error);
@@ -519,7 +507,8 @@
         });
         
         console.log('✅ Form script loaded successfully');
-    </script>
+        console.log('🔗 Database trigger enabled - n8n will be notified automatically');
+</script>
 </body>
 
 </html>
