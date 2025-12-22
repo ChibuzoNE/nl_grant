@@ -143,6 +143,37 @@
             transform: none;
         }
         
+        /* NEW: Loading state styling */
+        .loading-state {
+            display: none;
+            background: #e3f2fd;
+            border: 2px solid #90caf9;
+            color: #1565c0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .loading-state.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
         .success-message {
             display: none;
             background: #d4edda;
@@ -152,6 +183,10 @@
             border-radius: 10px;
             margin-top: 20px;
             text-align: center;
+        }
+        
+        .success-message.active {
+            display: block;
         }
         
         .error-message {
@@ -164,10 +199,56 @@
             margin-top: 20px;
         }
         
+        .error-message.active {
+            display: block;
+        }
+        
         .helper-text {
             font-size: 12px;
             color: #999;
             margin-top: 5px;
+        }
+        
+        .grant-results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .grant-results.active {
+            display: block;
+        }
+        
+        .grant-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .grant-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .grant-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .match-score {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
         }
     </style>
 </head>
@@ -213,9 +294,9 @@
                     <label>Organization Type <span class="required">*</span></label>
                     <select name="organization_type" required>
                         <option value="">Select...</option>
-                        <option value="nonprofit">Nonprofit / Charity</option>
-                        <option value="small-business">Small Business</option>
-                        <option value="social-enterprise">Social Enterprise</option>
+                        <option value="Nonprofit">Nonprofit / Charity</option>
+                        <option value="Small Business">Small Business</option>
+                        <option value="Social Enterprise">Social Enterprise</option>
                     </select>
                 </div>
                 
@@ -381,9 +462,9 @@
                     <label>How often would you like grant alerts? <span class="required">*</span></label>
                     <select name="alert_frequency" required>
                         <option value="">Select...</option>
-                        <option value="daily">Daily</option>
-                        <option value="weekly">Weekly (Recommended)</option>
-                        <option value="monthly">Monthly</option>
+                        <option value="Daily">Daily</option>
+                        <option value="Weekly">Weekly (Recommended)</option>
+                        <option value="Monthly">Monthly</option>
                     </select>
                 </div>
                 
@@ -398,48 +479,71 @@
             
             <button type="submit" class="submit-btn">Create My Profile & Find Grants</button>
             
+            <!-- NEW: Loading state -->
+            <div class="loading-state" id="loadingState">
+                <h3>🔍 Searching for grants matching your profile...</h3>
+                <div class="spinner"></div>
+                <p>This may take 30-60 seconds. Please wait...</p>
+                <p style="font-size: 12px; margin-top: 10px;">We're searching the web for grants specific to your needs!</p>
+            </div>
+            
             <div class="success-message" id="successMessage">
                 <h3>✅ Profile Created Successfully!</h3>
-                <p>We're finding personalized grants for you right now. You'll receive an email shortly with your matches!</p>
+                <p id="successDetails"></p>
             </div>
             
             <div class="error-message" id="errorMessage"></div>
+            
+            <!-- NEW: Grant results display -->
+            <div class="grant-results" id="grantResults">
+                <h3>🎉 Grants Found for You!</h3>
+                <div id="grantList"></div>
+            </div>
         </form>
     </div>
     
     <script>
         // ============================================
-        // STEP 1: UPDATE THESE WITH YOUR REAL VALUES
+        // CONFIGURATION - UPDATE THESE VALUES
         // ============================================
         const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';  
         const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
         
-        // ============================================
-        // STEP 2: Initialize Supabase
-        // ============================================
+        // 🚨 IMPORTANT: Replace this with your actual n8n webhook URL
+        const N8N_WEBHOOK_URL = 'https://your-n8n-instance.com/webhook/user-signup';
         
-        // Initialize Supabase client
+        // ============================================
+        // Initialize Supabase
+        // ============================================
         const { createClient } = window.supabase;
         const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
         
-        // Form submission handler
+        // ============================================
+        // Form submission handler with n8n integration
+        // ============================================
         document.getElementById('profileForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
             const submitBtn = e.target.querySelector('.submit-btn');
+            const loadingState = document.getElementById('loadingState');
             const successMsg = document.getElementById('successMessage');
             const errorMsg = document.getElementById('errorMessage');
+            const grantResults = document.getElementById('grantResults');
             
-            // Disable button and show loading
+            // Reset displays
             submitBtn.disabled = true;
             submitBtn.textContent = 'Creating your profile...';
-            successMsg.style.display = 'none';
-            errorMsg.style.display = 'none';
+            loadingState.classList.remove('active');
+            successMsg.classList.remove('active');
+            errorMsg.classList.remove('active');
+            grantResults.classList.remove('active');
             
-            console.log('Form submitted - starting process...');
+            console.log('📝 Form submitted - starting process...');
             
             try {
-                // Get form data
+                // ============================================
+                // STEP 1: Prepare form data
+                // ============================================
                 const formData = new FormData(e.target);
                 
                 // Get checkbox arrays
@@ -448,8 +552,11 @@
                 const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked'))
                     .map(cb => cb.value);
                 
-                // Build profile object
-                const profile = {
+                // Combine primary and secondary sectors for better matching
+                const allSectors = [formData.get('primary_sector'), ...secondary_sectors];
+                
+                // Build profile object for Supabase
+                const supabaseProfile = {
                     email: formData.get('email'),
                     organization_name: formData.get('organization_name'),
                     contact_person: formData.get('contact_person'),
@@ -470,45 +577,157 @@
                     profile_completion_date: new Date().toISOString()
                 };
                 
-                console.log('Profile data prepared:', profile);
+                // Build n8n webhook payload (simplified for grant matching)
+                const n8nPayload = {
+                    email: formData.get('email'),
+                    organization_name: formData.get('organization_name'),
+                    organization_type: formData.get('organization_type'),
+                    sector: allSectors, // Combined sectors for better matching
+                    interests: [
+                        ...project_type, 
+                        ...(formData.get('specific_interests') ? 
+                            formData.get('specific_interests').split(',').map(i => i.trim()) : 
+                            [])
+                    ],
+                    funding_range: formData.get('preferred_grant_size'),
+                    location: formData.get('location'),
+                    urgency: formData.get('urgency')
+                };
                 
-                // Insert into Supabase
-                console.log('Saving to Supabase...');
-                const { data, error } = await supabaseClient
+                console.log('📦 Profile data prepared');
+                console.log('📊 Supabase profile:', supabaseProfile);
+                console.log('🎯 n8n payload:', n8nPayload);
+                
+                // ============================================
+                // STEP 2: Save to Supabase
+                // ============================================
+                console.log('💾 Saving to Supabase...');
+                const { data: savedProfile, error: supabaseError } = await supabaseClient
                     .from('user_profiles')
-                    .insert([profile])
+                    .insert([supabaseProfile])
                     .select();
                 
-                if (error) {
-                    console.error('Supabase error:', error);
-                    throw new Error(`Database error: ${error.message}`);
+                if (supabaseError) {
+                    console.error('❌ Supabase error:', supabaseError);
+                    throw new Error(`Database error: ${supabaseError.message}`);
                 }
                 
-                console.log('✅ Profile saved successfully:', data);
+                console.log('✅ Profile saved to Supabase:', savedProfile);
+                const userId = savedProfile[0].id;
                 
-                // Success! Show message
-                successMsg.style.display = 'block';
+                // Update button text
+                submitBtn.textContent = 'Searching for grants...';
+                
+                // ============================================
+                // STEP 3: Call n8n webhook for instant grant search
+                // ============================================
+                console.log('🚀 Triggering n8n instant grant discovery...');
+                console.log('🔗 Webhook URL:', N8N_WEBHOOK_URL);
+                
+                // Show loading state
+                loadingState.classList.add('active');
+                loadingState.scrollIntoView({ behavior: 'smooth' });
+                
+                const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        ...n8nPayload,
+                        user_id: userId // Pass the Supabase user ID
+                    })
+                });
+                
+                if (!webhookResponse.ok) {
+                    console.warn('⚠️ Webhook responded with error:', webhookResponse.status);
+                    throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
+                }
+                
+                const webhookResult = await webhookResponse.json();
+                console.log('✅ n8n workflow completed:', webhookResult);
+                
+                // ============================================
+                // STEP 4: Display results
+                // ============================================
+                loadingState.classList.remove('active');
+                
+                if (webhookResult.success && webhookResult.grants && webhookResult.grants.length > 0) {
+                    // Show grants found
+                    console.log(`🎉 Found ${webhookResult.grants.length} grants!`);
+                    
+                    displayGrants(webhookResult.grants);
+                    
+                    successMsg.classList.add('active');
+                    document.getElementById('successDetails').innerHTML = `
+                        <strong>🎉 We found ${webhookResult.grants.length} grants matching your profile!</strong><br>
+                        <span style="font-size: 14px;">Scroll down to see your personalized grant matches.</span>
+                    `;
+                    
+                } else {
+                    // No grants found, but profile created
+                    console.log('⚠️ No grants found, but profile saved');
+                    
+                    successMsg.classList.add('active');
+                    document.getElementById('successDetails').innerHTML = `
+                        <strong>Profile created successfully!</strong><br>
+                        <span style="font-size: 14px;">We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear. You'll receive an email at ${formData.get('email')}.</span>
+                    `;
+                }
+                
+                // Reset form
                 e.target.reset();
                 successMsg.scrollIntoView({ behavior: 'smooth' });
                 
-                console.log('✅ Profile created successfully!');
-                console.log('📧 Database trigger will automatically notify n8n for matching');
-                
-                // Note: The database trigger automatically calls n8n webhook
-                // No need to make the webhook call from the form anymore!
+                console.log('✅ PROCESS COMPLETE!');
                 
             } catch (error) {
                 console.error('❌ Error occurred:', error);
-                errorMsg.textContent = `Error: ${error.message}. Please try again or contact support.`;
-                errorMsg.style.display = 'block';
+                
+                loadingState.classList.remove('active');
+                errorMsg.textContent = `Error: ${error.message}. Your profile may have been saved, but we couldn't search for grants. Please try refreshing the page or contact support.`;
+                errorMsg.classList.add('active');
+                errorMsg.scrollIntoView({ behavior: 'smooth' });
+                
                 submitBtn.disabled = false;
                 submitBtn.textContent = 'Create My Profile & Find Grants';
             }
         });
         
+        // ============================================
+        // Display grants function
+        // ============================================
+        function displayGrants(grants) {
+            const grantResults = document.getElementById('grantResults');
+            const grantList = document.getElementById('grantList');
+            
+            grantList.innerHTML = grants.map(grant => `
+                <div class="grant-card">
+                    <h4>${grant.grant_name || 'Unnamed Grant'}</h4>
+                    <p><strong>Provider:</strong> ${grant.provider || 'N/A'}</p>
+                    <p><strong>Description:</strong> ${grant.ai_summary || grant.description || 'No description available'}</p>
+                    ${grant.amount_min || grant.amount_max ? `
+                        <p><strong>Funding:</strong> $${(grant.amount_min || 0).toLocaleString()} - $${(grant.amount_max || 'Varies').toLocaleString()}</p>
+                    ` : ''}
+                    ${grant.deadline ? `
+                        <p><strong>Deadline:</strong> ${new Date(grant.deadline).toLocaleDateString()}</p>
+                    ` : ''}
+                    ${grant.application_url ? `
+                        <p><strong>Apply:</strong> <a href="${grant.application_url}" target="_blank">View Grant Details →</a></p>
+                    ` : ''}
+                    ${grant.match_score ? `
+                        <span class="match-score">${grant.match_score}% Match</span>
+                    ` : ''}
+                </div>
+            `).join('');
+            
+            grantResults.classList.add('active');
+            grantResults.scrollIntoView({ behavior: 'smooth' });
+        }
+        
         console.log('✅ Form script loaded successfully');
-        console.log('🔗 Database trigger enabled - n8n will be notified automatically');
-</script>
+        console.log('🔗 n8n webhook integration active');
+        console.log('📍 Ready to process form submissions');
+    </script>
 </body>
-
 </html>
