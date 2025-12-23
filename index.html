@@ -477,144 +477,140 @@
     const { createClient } = window.supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-    document.getElementById('profileForm').addEventListener('submit', async (e) => {
-        e.preventDefault();
+   document.getElementById('profileForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
     
-        // ===============================
-        // UI Elements
-        // ===============================
-        const submitBtn = e.target.querySelector('.submit-btn');
-        const loadingState = document.getElementById('loadingState');
-        const successMsg = document.getElementById('successMessage');
-        const errorMsg = document.getElementById('errorMessage');
-        const grantResults = document.getElementById('grantResults');
+    const submitBtn = e.target.querySelector('.submit-btn');
+    const loadingState = document.getElementById('loadingState');
+    const successMsg = document.getElementById('successMessage');
+    const errorMsg = document.getElementById('errorMessage');
+    const grantResults = document.getElementById('grantResults');
     
-        // Reset UI
-        submitBtn.disabled = true;
-        submitBtn.textContent = 'Creating your profile...';
+    // Reset displays
+    submitBtn.disabled = true;
+    submitBtn.textContent = 'Saving profile and searching for grants...';
+    loadingState.classList.remove('active');
+    successMsg.classList.remove('active');
+    errorMsg.classList.remove('active');
+    grantResults.classList.remove('active');
+    
+    console.log('📝 Form submitted - starting process...');
+    
+    try {
+        // Get form data
+        const formData = new FormData(e.target);
+        
+        // Get checkbox arrays
+        const secondary_sectors = Array.from(document.querySelectorAll('input[name="secondary_sectors"]:checked'))
+            .map(cb => cb.value);
+        const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked'))
+            .map(cb => cb.value);
+        
+        // Combine primary and secondary sectors
+        const allSectors = [formData.get('primary_sector'), ...secondary_sectors];
+        
+        // Build n8n webhook payload
+        const n8nPayload = {
+            email: formData.get('email'),
+            organization_name: formData.get('organization_name'),
+            contact_person: formData.get('contact_person'),
+            phone: formData.get('phone') || null,
+            organization_type: formData.get('organization_type'),
+            num_employees: formData.get('num_employees'),
+            years_operation: formData.get('years_operation'),
+            location: formData.get('location'),
+            primary_sector: formData.get('primary_sector'),
+            secondary_sectors: secondary_sectors,
+            sector: allSectors,
+            specific_interests: formData.get('specific_interests') || null,
+            preferred_grant_size: formData.get('preferred_grant_size'),
+            project_type: project_type,
+            urgency: formData.get('urgency'),
+            alert_frequency: formData.get('alert_frequency'),
+            notification_email: document.querySelector('input[name="notification_email"]').checked,
+            interests: [
+                ...project_type, 
+                ...(formData.get('specific_interests') ? 
+                    formData.get('specific_interests').split(',').map(i => i.trim()) : 
+                    [])
+            ],
+            funding_range: formData.get('preferred_grant_size')
+        };
+        
+        console.log('📦 Payload prepared:', n8nPayload);
+        
+        // Show loading state
         loadingState.classList.add('active');
-        successMsg.classList.remove('active');
-        errorMsg.classList.remove('active');
-        grantResults.classList.remove('active');
-    
-        // ===============================
-        // Validation: at least one project type
-        // ===============================
-        const projectChecked = document.querySelectorAll('input[name="project_type"]:checked');
-        if (projectChecked.length === 0) {
-            loadingState.classList.remove('active');
-            errorMsg.textContent = 'Please select at least one project type.';
-            errorMsg.classList.add('active');
-            submitBtn.disabled = false;
-            return;
+        loadingState.scrollIntoView({ behavior: 'smooth' });
+        
+        // Call n8n webhook (n8n will save to Supabase)
+        console.log('🚀 Calling n8n webhook...');
+        console.log('🔗 Webhook URL:', N8N_WEBHOOK_URL);
+        
+        const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(n8nPayload)
+        });
+        
+        if (!webhookResponse.ok) {
+            console.warn('⚠️ Webhook responded with error:', webhookResponse.status);
+            throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
         }
-    
-        try {
-            // ===============================
-            // STEP 1: Collect form data
-            // ===============================
-            const formData = new FormData(e.target);
-            const secondary_sectors = Array.from(document.querySelectorAll('input[name="secondary_sectors"]:checked')).map(cb => cb.value);
-            const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked')).map(cb => cb.value);
-    
-            const supabaseProfile = {
-                email: formData.get('email'),
-                organization_name: formData.get('organization_name'),
-                contact_person: formData.get('contact_person'),
-                phone: formData.get('phone') || null,
-                organization_type: formData.get('organization_type'),
-                num_employees: formData.get('num_employees'),
-                years_operation: formData.get('years_operation'),
-                location: formData.get('location'),
-                primary_sector: formData.get('primary_sector'),
-                secondary_sectors: secondary_sectors,
-                specific_interests: formData.get('specific_interests') || null,
-                preferred_grant_size: formData.get('preferred_grant_size'),
-                project_type: project_type,
-                urgency: formData.get('urgency'),
-                alert_frequency: formData.get('alert_frequency'),
-                notification_email: document.querySelector('input[name="notification_email"]').checked,
-                profile_completed: true,
-                profile_completion_date: new Date().toISOString()
-            };
-    
-            // ===============================
-            // STEP 2: Save to Supabase
-            // ===============================
-            const { data: savedProfile, error: supabaseError } = await supabaseClient
-                .from('user_profiles')
-                .insert([supabaseProfile])
-                .select();
-    
-            if (supabaseError) throw new Error(supabaseError.message);
-    
-            const userId = savedProfile[0].id;
-    
-            // ===============================
-            // STEP 3: Update UI for loading grants
-            // ===============================
-            submitBtn.textContent = 'Searching for grants...';
-            loadingState.classList.add('active');
-            loadingState.scrollIntoView({ behavior: 'smooth' });
-    
-            // ===============================
-            // STEP 4: Trigger n8n webhook
-            // ===============================
-            const n8nPayload = {
-                ...supabaseProfile,
-                user_id: userId
-            };
-    
-            const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify(n8nPayload)
-            });
-    
-            if (!webhookResponse.ok) {
-                throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
-            }
-    
-            const webhookResult = await webhookResponse.json();
-    
-            // ===============================
-            // STEP 5: Display results
-            // ===============================
-            loadingState.classList.remove('active');
-    
-            if (webhookResult.success && webhookResult.grants && webhookResult.grants.length > 0) {
-                displayGrants(webhookResult.grants);
-                successMsg.classList.add('active');
-                document.getElementById('successDetails').innerHTML = `
-                    <strong>🎉 We found ${webhookResult.grants.length} grants matching your profile!</strong><br>
-                    <span style="font-size: 14px;">Scroll down to see your personalized grant matches.</span>
-                `;
-            } else {
-                successMsg.classList.add('active');
-                document.getElementById('successDetails').innerHTML = `
-                    <strong>✅ Profile created successfully!</strong><br>
-                    <span style="font-size: 14px;">
-                    We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear.
-                    You'll receive an email at ${supabaseProfile.email}.
-                    </span>
-                `;
-            }
-    
-            e.target.reset();
-            successMsg.scrollIntoView({ behavior: 'smooth' });
-            console.log('✅ PROCESS COMPLETE!');
-    
-        } catch (error) {
-            console.error('❌ Error occurred:', error);
-            loadingState.classList.remove('active');
-            errorMsg.textContent = `Error: ${error.message}. Your profile may have been saved, but we couldn't search for grants. Please try refreshing the page or contact support.`;
-            errorMsg.classList.add('active');
-            errorMsg.scrollIntoView({ behavior: 'smooth' });
-        } finally {
-            submitBtn.disabled = false;
-            submitBtn.textContent = 'Create My Profile & Find Grants';
+        
+        const webhookResult = await webhookResponse.json();
+        console.log('✅ n8n workflow completed:', webhookResult);
+        
+        // Get the user_id from n8n response
+        const userId = webhookResult.user_id;
+        console.log('User created with ID:', userId);
+        
+        // Hide loading
+        loadingState.classList.remove('active');
+        
+        if (webhookResult.success && webhookResult.grants && webhookResult.grants.length > 0) {
+            // Show grants found
+            console.log(`🎉 Found ${webhookResult.grants.length} grants!`);
+            
+            displayGrants(webhookResult.grants);
+            
+            successMsg.classList.add('active');
+            document.getElementById('successDetails').innerHTML = `
+                <strong>🎉 We found ${webhookResult.grants.length} grants matching your profile!</strong><br>
+                <span style="font-size: 14px;">Scroll down to see your personalized grant matches.</span>
+            `;
+            
+        } else {
+            // No grants found, but profile created
+            console.log('⚠️ Profile created but no grants found yet');
+            
+            successMsg.classList.add('active');
+            document.getElementById('successDetails').innerHTML = `
+                <strong>Profile created successfully!</strong><br>
+                <span style="font-size: 14px;">We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear. You'll receive an email at ${formData.get('email')}.</span>
+            `;
         }
-    });
+        
+        // Reset form
+        e.target.reset();
+        successMsg.scrollIntoView({ behavior: 'smooth' });
+        
+        console.log('✅ PROCESS COMPLETE!');
+        
+    } catch (error) {
+        console.error('❌ Error occurred:', error);
+        
+        loadingState.classList.remove('active');
+        errorMsg.textContent = `Error: ${error.message}. Please try again or contact support.`;
+        errorMsg.classList.add('active');
+        errorMsg.scrollIntoView({ behavior: 'smooth' });
+        
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'Create My Profile & Find Grants';
+    }
+});
     </script>
 </body>
 </html>
