@@ -6,7 +6,252 @@
 <title>NL Grants - Create Your Profile</title>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-/* -- styles omitted for brevity, use your existing styles -- */
+<style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 20px;
+            padding: 40px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+        }
+        
+        .header h1 {
+            color: #333;
+            font-size: 32px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            color: #666;
+            font-size: 16px;
+        }
+        
+        .form-section {
+            margin-bottom: 35px;
+        }
+        
+        .form-section h2 {
+            color: #667eea;
+            font-size: 20px;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid #f0f0f0;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-group label {
+            display: block;
+            color: #333;
+            font-weight: 500;
+            margin-bottom: 8px;
+            font-size: 14px;
+        }
+        
+        .form-group label .required {
+            color: #e74c3c;
+        }
+        
+        .form-group input[type="text"],
+        .form-group input[type="email"],
+        .form-group input[type="tel"],
+        .form-group select,
+        .form-group textarea {
+            width: 100%;
+            padding: 12px 15px;
+            border: 2px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.3s;
+        }
+        
+        .form-group input:focus,
+        .form-group select:focus,
+        .form-group textarea:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        
+        .form-group textarea {
+            resize: vertical;
+            min-height: 100px;
+        }
+        
+        .checkbox-group {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 10px;
+        }
+        
+        .checkbox-item {
+            display: flex;
+            align-items: center;
+        }
+        
+        .checkbox-item input[type="checkbox"] {
+            margin-right: 8px;
+            width: 18px;
+            height: 18px;
+            cursor: pointer;
+        }
+        
+        .checkbox-item label {
+            cursor: pointer;
+            font-weight: normal;
+        }
+        
+        .submit-btn {
+            width: 100%;
+            padding: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 16px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .submit-btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .submit-btn:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        /* NEW: Loading state styling */
+        .loading-state {
+            display: none;
+            background: #e3f2fd;
+            border: 2px solid #90caf9;
+            color: #1565c0;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .loading-state.active {
+            display: block;
+        }
+        
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        .success-message {
+            display: none;
+            background: #d4edda;
+            border: 2px solid #c3e6cb;
+            color: #155724;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+            text-align: center;
+        }
+        
+        .success-message.active {
+            display: block;
+        }
+        
+        .error-message {
+            display: none;
+            background: #f8d7da;
+            border: 2px solid #f5c6cb;
+            color: #721c24;
+            padding: 20px;
+            border-radius: 10px;
+            margin-top: 20px;
+        }
+        
+        .error-message.active {
+            display: block;
+        }
+        
+        .helper-text {
+            font-size: 12px;
+            color: #999;
+            margin-top: 5px;
+        }
+        
+        .grant-results {
+            margin-top: 30px;
+            padding: 20px;
+            background: #f8f9fa;
+            border-radius: 10px;
+            display: none;
+        }
+        
+        .grant-results.active {
+            display: block;
+        }
+        
+        .grant-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 15px;
+            border-left: 4px solid #667eea;
+        }
+        
+        .grant-card h4 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+        
+        .grant-card p {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 5px;
+        }
+        
+        .match-score {
+            display: inline-block;
+            background: #667eea;
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 12px;
+            font-weight: bold;
+            margin-top: 10px;
+        }
+    </style>
 </style>
 </head>
 <body>
@@ -227,151 +472,151 @@
 </div>
 
 <script>
-const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
-const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
-const N8N_WEBHOOK_URL = 'YOUR_N8N_WEBHOOK_URL';
-
-const { createClient } = window.supabase;
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-
-document.getElementById('profileForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
-
-    // ===============================
-    // UI Elements
-    // ===============================
-    const submitBtn = e.target.querySelector('.submit-btn');
-    const loadingState = document.getElementById('loadingState');
-    const successMsg = document.getElementById('successMessage');
-    const errorMsg = document.getElementById('errorMessage');
-    const grantResults = document.getElementById('grantResults');
-
-    // Reset UI
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Creating your profile...';
-    loadingState.classList.add('active');
-    successMsg.classList.remove('active');
-    errorMsg.classList.remove('active');
-    grantResults.classList.remove('active');
-
-    // ===============================
-    // Validation: at least one project type
-    // ===============================
-    const projectChecked = document.querySelectorAll('input[name="project_type"]:checked');
-    if (projectChecked.length === 0) {
-        loadingState.classList.remove('active');
-        errorMsg.textContent = 'Please select at least one project type.';
-        errorMsg.classList.add('active');
-        submitBtn.disabled = false;
-        return;
-    }
-
-    try {
+    const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
+    const N8N_WEBHOOK_URL = 'YOUR_N8N_WEBHOOK_URL';
+    
+    const { createClient } = window.supabase;
+    const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+    
         // ===============================
-        // STEP 1: Collect form data
+        // UI Elements
         // ===============================
-        const formData = new FormData(e.target);
-        const secondary_sectors = Array.from(document.querySelectorAll('input[name="secondary_sectors"]:checked')).map(cb => cb.value);
-        const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked')).map(cb => cb.value);
-
-        const supabaseProfile = {
-            email: formData.get('email'),
-            organization_name: formData.get('organization_name'),
-            contact_person: formData.get('contact_person'),
-            phone: formData.get('phone') || null,
-            organization_type: formData.get('organization_type'),
-            num_employees: formData.get('num_employees'),
-            years_operation: formData.get('years_operation'),
-            location: formData.get('location'),
-            primary_sector: formData.get('primary_sector'),
-            secondary_sectors: secondary_sectors,
-            specific_interests: formData.get('specific_interests') || null,
-            preferred_grant_size: formData.get('preferred_grant_size'),
-            project_type: project_type,
-            urgency: formData.get('urgency'),
-            alert_frequency: formData.get('alert_frequency'),
-            notification_email: document.querySelector('input[name="notification_email"]').checked,
-            profile_completed: true,
-            profile_completion_date: new Date().toISOString()
-        };
-
-        // ===============================
-        // STEP 2: Save to Supabase
-        // ===============================
-        const { data: savedProfile, error: supabaseError } = await supabaseClient
-            .from('user_profiles')
-            .insert([supabaseProfile])
-            .select();
-
-        if (supabaseError) throw new Error(supabaseError.message);
-
-        const userId = savedProfile[0].id;
-
-        // ===============================
-        // STEP 3: Update UI for loading grants
-        // ===============================
-        submitBtn.textContent = 'Searching for grants...';
+        const submitBtn = e.target.querySelector('.submit-btn');
+        const loadingState = document.getElementById('loadingState');
+        const successMsg = document.getElementById('successMessage');
+        const errorMsg = document.getElementById('errorMessage');
+        const grantResults = document.getElementById('grantResults');
+    
+        // Reset UI
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating your profile...';
         loadingState.classList.add('active');
-        loadingState.scrollIntoView({ behavior: 'smooth' });
-
+        successMsg.classList.remove('active');
+        errorMsg.classList.remove('active');
+        grantResults.classList.remove('active');
+    
         // ===============================
-        // STEP 4: Trigger n8n webhook
+        // Validation: at least one project type
         // ===============================
-        const n8nPayload = {
-            ...supabaseProfile,
-            user_id: userId
-        };
-
-        const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(n8nPayload)
-        });
-
-        if (!webhookResponse.ok) {
-            throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
+        const projectChecked = document.querySelectorAll('input[name="project_type"]:checked');
+        if (projectChecked.length === 0) {
+            loadingState.classList.remove('active');
+            errorMsg.textContent = 'Please select at least one project type.';
+            errorMsg.classList.add('active');
+            submitBtn.disabled = false;
+            return;
         }
-
-        const webhookResult = await webhookResponse.json();
-
-        // ===============================
-        // STEP 5: Display results
-        // ===============================
-        loadingState.classList.remove('active');
-
-        if (webhookResult.success && webhookResult.grants && webhookResult.grants.length > 0) {
-            displayGrants(webhookResult.grants);
-            successMsg.classList.add('active');
-            document.getElementById('successDetails').innerHTML = `
-                <strong>🎉 We found ${webhookResult.grants.length} grants matching your profile!</strong><br>
-                <span style="font-size: 14px;">Scroll down to see your personalized grant matches.</span>
-            `;
-        } else {
-            successMsg.classList.add('active');
-            document.getElementById('successDetails').innerHTML = `
-                <strong>✅ Profile created successfully!</strong><br>
-                <span style="font-size: 14px;">
-                We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear.
-                You'll receive an email at ${supabaseProfile.email}.
-                </span>
-            `;
+    
+        try {
+            // ===============================
+            // STEP 1: Collect form data
+            // ===============================
+            const formData = new FormData(e.target);
+            const secondary_sectors = Array.from(document.querySelectorAll('input[name="secondary_sectors"]:checked')).map(cb => cb.value);
+            const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked')).map(cb => cb.value);
+    
+            const supabaseProfile = {
+                email: formData.get('email'),
+                organization_name: formData.get('organization_name'),
+                contact_person: formData.get('contact_person'),
+                phone: formData.get('phone') || null,
+                organization_type: formData.get('organization_type'),
+                num_employees: formData.get('num_employees'),
+                years_operation: formData.get('years_operation'),
+                location: formData.get('location'),
+                primary_sector: formData.get('primary_sector'),
+                secondary_sectors: secondary_sectors,
+                specific_interests: formData.get('specific_interests') || null,
+                preferred_grant_size: formData.get('preferred_grant_size'),
+                project_type: project_type,
+                urgency: formData.get('urgency'),
+                alert_frequency: formData.get('alert_frequency'),
+                notification_email: document.querySelector('input[name="notification_email"]').checked,
+                profile_completed: true,
+                profile_completion_date: new Date().toISOString()
+            };
+    
+            // ===============================
+            // STEP 2: Save to Supabase
+            // ===============================
+            const { data: savedProfile, error: supabaseError } = await supabaseClient
+                .from('user_profiles')
+                .insert([supabaseProfile])
+                .select();
+    
+            if (supabaseError) throw new Error(supabaseError.message);
+    
+            const userId = savedProfile[0].id;
+    
+            // ===============================
+            // STEP 3: Update UI for loading grants
+            // ===============================
+            submitBtn.textContent = 'Searching for grants...';
+            loadingState.classList.add('active');
+            loadingState.scrollIntoView({ behavior: 'smooth' });
+    
+            // ===============================
+            // STEP 4: Trigger n8n webhook
+            // ===============================
+            const n8nPayload = {
+                ...supabaseProfile,
+                user_id: userId
+            };
+    
+            const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(n8nPayload)
+            });
+    
+            if (!webhookResponse.ok) {
+                throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
+            }
+    
+            const webhookResult = await webhookResponse.json();
+    
+            // ===============================
+            // STEP 5: Display results
+            // ===============================
+            loadingState.classList.remove('active');
+    
+            if (webhookResult.success && webhookResult.grants && webhookResult.grants.length > 0) {
+                displayGrants(webhookResult.grants);
+                successMsg.classList.add('active');
+                document.getElementById('successDetails').innerHTML = `
+                    <strong>🎉 We found ${webhookResult.grants.length} grants matching your profile!</strong><br>
+                    <span style="font-size: 14px;">Scroll down to see your personalized grant matches.</span>
+                `;
+            } else {
+                successMsg.classList.add('active');
+                document.getElementById('successDetails').innerHTML = `
+                    <strong>✅ Profile created successfully!</strong><br>
+                    <span style="font-size: 14px;">
+                    We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear.
+                    You'll receive an email at ${supabaseProfile.email}.
+                    </span>
+                `;
+            }
+    
+            e.target.reset();
+            successMsg.scrollIntoView({ behavior: 'smooth' });
+            console.log('✅ PROCESS COMPLETE!');
+    
+        } catch (error) {
+            console.error('❌ Error occurred:', error);
+            loadingState.classList.remove('active');
+            errorMsg.textContent = `Error: ${error.message}. Your profile may have been saved, but we couldn't search for grants. Please try refreshing the page or contact support.`;
+            errorMsg.classList.add('active');
+            errorMsg.scrollIntoView({ behavior: 'smooth' });
+        } finally {
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'Create My Profile & Find Grants';
         }
-
-        e.target.reset();
-        successMsg.scrollIntoView({ behavior: 'smooth' });
-        console.log('✅ PROCESS COMPLETE!');
-
-    } catch (error) {
-        console.error('❌ Error occurred:', error);
-        loadingState.classList.remove('active');
-        errorMsg.textContent = `Error: ${error.message}. Your profile may have been saved, but we couldn't search for grants. Please try refreshing the page or contact support.`;
-        errorMsg.classList.add('active');
-        errorMsg.scrollIntoView({ behavior: 'smooth' });
-    } finally {
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Create My Profile & Find Grants';
-    }
-});
-</script>
+    });
+    </script>
 </body>
 </html>
