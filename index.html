@@ -578,9 +578,11 @@
             
             successMsg.classList.add('active');
             document.getElementById('successDetails').innerHTML = `
-                <strong>🎉 We found ${webhookResult.grants.length} grants matching your profile!</strong><br>
-                <span style="font-size: 14px;">Scroll down to see your personalized grant matches.</span>
-            `;
+                  <strong>✅ Profile Created Successfully!</strong><br>
+                  <span>We're searching for grants that match your profile. This takes about 60 seconds.</span><br>
+                  <a href="${webhookResult.redirect_url}" style="margin-top: 15px; display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">
+                    View Your Dashboard
+              </a>;
             
         } else {
             // No grants found, but profile created
