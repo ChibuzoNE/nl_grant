@@ -560,29 +560,21 @@
             throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
         }
         
-        const webhookResult = await webhookResponse.json();
-        console.log('✅ n8n workflow completed:', webhookResult);
-        
-        // Get the user_id from n8n response
-        const userId = webhookResult.user_id;
-        console.log('User created with ID:', userId);
-        
-        // Hide loading
-        loadingState.classList.remove('active');
-        
-        if (webhookResult.success && webhookResult.grants && webhookResult.grants.length > 0) {
-            // Show grants found
-            console.log(`🎉 Found ${webhookResult.grants.length} grants!`);
-            
-            displayGrants(webhookResult.grants);
-            
-            successMsg.classList.add('active');
-            document.getElementById('successDetails').innerHTML = `
-                  <strong>✅ Profile Created Successfully!</strong><br>
-                  <span>We're searching for grants that match your profile. This takes about 60 seconds.</span><br>
-                  <a href="${webhookResult.redirect_url}" style="margin-top: 15px; display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">
-                    View Your Dashboard
-              </a>;
+       const webhookResult = await webhookResponse.json();
+
+       if (webhookResult.success) {
+         // Show success message
+         successMsg.classList.add('active');
+         document.getElementById('successDetails').innerHTML = `
+           <strong>✅ Profile Created Successfully!</strong><br>
+           <span>We're searching for grants that match your profile. This takes about 60 seconds.</span><br>
+           <a href="${webhookResult.redirect_url}" style="margin-top: 15px; display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">
+             View Your Dashboard
+           </a>
+         `;
+         
+         // Reset form
+         e.target.reset();
             
         } else {
             // No grants found, but profile created
