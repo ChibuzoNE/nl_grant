@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Your Grants Dashboard</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+    
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      padding: 20px;
+    }
+    
+    .container {
+      max-width: 1200px;
+      margin: 0 auto;
+      background: white;
+      border-radius: 20px;
+      padding: 40px;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+    }
+    
+    h1 {
+      color: #667eea;
+      margin-bottom: 10px;
+    }
+    
+    .loading {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    
+    .spinner {
+      border: 4px solid #f3f3f3;
+      border-top: 4px solid #667eea;
+      border-radius: 50%;
+      width: 50px;
+      height: 50px;
+      animation: spin 1s linear infinite;
+      margin: 20px auto;
+    }
+    
+    @keyframes spin {
+      0% { transform: rotate(0deg); }
+      100% { transform: rotate(360deg); }
+    }
+    
+    .grant-card {
+      border: 2px solid #e0e0e0;
+      border-radius: 12px;
+      padding: 24px;
+      margin: 20px 0;
+      transition: all 0.3s ease;
+      background: white;
+    }
+    
+    .grant-card:hover {
+      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
+      border-color: #667eea;
+      transform: translateY(-2px);
+    }
+    
+    .grant-card h3 {
+      color: #333;
+      margin-bottom: 8px;
+      font-size: 1.4em;
+    }
+    
+    .grant-card .provider {
+      color: #667eea;
+      font-weight: 600;
+      margin-bottom: 12px;
+      font-size: 1.1em;
+    }
+    
+    .grant-card .summary {
+      color: #555;
+      line-height: 1.6;
+      margin: 16px 0;
+      padding: 16px;
+      background: #f8f9fa;
+      border-left: 4px solid #667eea;
+      border-radius: 4px;
+    }
+    
+    .grant-details {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 16px;
+      margin: 20px 0;
+    }
+    
+    .detail-item {
+      background: #f8f9fa;
+      padding: 12px;
+      border-radius: 8px;
+    }
+    
+    .detail-item strong {
+      display: block;
+      color: #667eea;
+      margin-bottom: 4px;
+      font-size: 0.9em;
+    }
+    
+    .apply-btn {
+      display: inline-block;
+      background: #667eea;
+      color: white;
+      padding: 12px 24px;
+      text-decoration: none;
+      border-radius: 8px;
+      margin-top: 16px;
+      font-weight: 600;
+      transition: all 0.3s ease;
+    }
+    
+    .apply-btn:hover {
+      background: #5568d3;
+      transform: translateY(-2px);
+      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+    }
+    
+    .match-score {
+      display: inline-block;
+      background: #10b981;
+      color: white;
+      padding: 6px 12px;
+      border-radius: 20px;
+      font-size: 0.9em;
+      font-weight: 600;
+      margin-left: 10px;
+    }
+    
+    .no-grants {
+      text-align: center;
+      padding: 60px 20px;
+      color: #666;
+    }
+    
+    .no-grants h2 {
+      color: #667eea;
+      margin-bottom: 16px;
+    }
+    
+    .refresh-info {
+      background: #e3f2fd;
+      border-left: 4px solid #2196f3;
+      padding: 16px;
+      margin-bottom: 24px;
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>🎯 Your Matching Grants</h1>
+    <p style="color: #666; margin-bottom: 24px;">Grants discovered based on your profile</p>
+    
+    <div id="refresh-notice" class="refresh-info" style="display: none;">
+      🔄 Still searching for grants... Auto-refreshing every 10 seconds
+    </div>
+    
+    <div id="loading" class="loading">
+      <div class="spinner"></div>
+      <p>Loading your grants...</p>
+    </div>
+    
+    <div id="grants-container"></div>
+  </div>
+
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script>
+    // Supabase configuration
+    const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ1NTE4ODMsImV4cCI6MjA1MDEyNzg4M30.lqlE3t5ObkvwVAmX40mLTVn-nrzgFB4J6QDnzYZCODY';
+    
+    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    
+    // Get user_id from URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const userId = urlParams.get('user_id');
+    
+    if (!userId) {
+      document.getElementById('loading').innerHTML = '<p>❌ No user ID provided. Please submit the form first.</p>';
+    }
+    
+    async function loadGrants() {
+      try {
+        const { data: grants, error } = await supabase
+          .from('grants')
+          .select('*')
+          .eq('discovered_by_user_id', userId)
+          .order('created_at', { ascending: false });
+        
+        if (error) throw error;
+        
+        displayGrants(grants);
+        
+      } catch (error) {
+        console.error('Error loading grants:', error);
+        document.getElementById('loading').innerHTML = `
+          <p>❌ Error loading grants: ${error.message}</p>
+        `;
+      }
+    }
+    
+    function displayGrants(grants) {
+      const loading = document.getElementById('loading');
+      const container = document.getElementById('grants-container');
+      const refreshNotice = document.getElementById('refresh-notice');
+      
+      loading.style.display = 'none';
+      
+      if (!grants || grants.length === 0) {
+        refreshNotice.style.display = 'block';
+        container.innerHTML = `
+          <div class="no-grants">
+            <h2>⏳ Still Searching...</h2>
+            <p>We're analyzing grant websites to find matches for your profile.</p>
+            <p>This usually takes 30-90 seconds. The page will refresh automatically.</p>
+          </div>
+        `;
+        return;
+      }
+      
+      refreshNotice.style.display = 'none';
+      
+      const grantsHTML = grants.map(grant => `
+        <div class="grant-card">
+          <h3>
+            ${grant.grant_name || 'Untitled Grant'}
+            ${grant.match_score ? `<span class="match-score">${grant.match_score}% Match</span>` : ''}
+          </h3>
+          <div class="provider">${grant.provider || 'Unknown Provider'}</div>
+          
+          ${grant.ai_summary ? `
+            <div class="summary">
+              <strong>💡 Why this matches you:</strong><br>
+              ${grant.ai_summary}
+            </div>
+          ` : ''}
+          
+          ${grant.description ? `<p>${grant.description}</p>` : ''}
+          
+          <div class="grant-details">
+            ${grant.amount_min || grant.amount_max ? `
+              <div class="detail-item">
+                <strong>💰 Funding Amount</strong>
+                ${formatAmount(grant.amount_min, grant.amount_max)}
+              </div>
+            ` : ''}
+            
+            ${grant.deadline ? `
+              <div class="detail-item">
+                <strong>📅 Deadline</strong>
+                ${formatDate(grant.deadline)}
+              </div>
+            ` : ''}
+            
+            ${grant.eligibility ? `
+              <div class="detail-item">
+                <strong>✅ Eligibility</strong>
+                ${grant.eligibility}
+              </div>
+            ` : ''}
+            
+            ${grant.sector && grant.sector.length > 0 ? `
+              <div class="detail-item">
+                <strong>🏢 Sectors</strong>
+                ${grant.sector.join(', ')}
+              </div>
+            ` : ''}
+          </div>
+          
+          ${grant.application_url ? `
+            <a href="${grant.application_url}" target="_blank" class="apply-btn">
+              Apply Now →
+            </a>
+          ` : ''}
+        </div>
+      `).join('');
+      
+      container.innerHTML = `
+        <div style="margin-bottom: 20px; color: #10b981; font-weight: 600;">
+          ✅ Found ${grants.length} matching grant${grants.length !== 1 ? 's' : ''}!
+        </div>
+        ${grantsHTML}
+      `;
+    }
+    
+    function formatAmount(min, max) {
+      if (min && max) {
+        return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+      } else if (min) {
+        return `From $${min.toLocaleString()}`;
+      } else if (max) {
+        return `Up to $${max.toLocaleString()}`;
+      }
+      return 'Amount not specified';
+    }
+    
+    function formatDate(dateString) {
+      if (!dateString) return 'Not specified';
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'long', 
+        day: 'numeric' 
+      });
+    }
+    
+    // Load grants on page load
+    loadGrants();
+    
+    // Auto-refresh every 10 seconds for first minute
+    let refreshCount = 0;
+    const refreshInterval = setInterval(() => {
+      refreshCount++;
+      loadGrants();
+      if (refreshCount >= 6) {
+        clearInterval(refreshInterval);
+        document.getElementById('refresh-notice').style.display = 'none';
+      }
+    }, 10000);
+  </script>
+</body>
+</html>
