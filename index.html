@@ -560,36 +560,47 @@
             throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
         }
         
-       const webhookResult = await webhookResponse.json();
-
-       if (webhookResult.success) {
-         // Show success message
-         successMsg.classList.add('active');
-         document.getElementById('successDetails').innerHTML = `
-           <strong>✅ Profile Created Successfully!</strong><br>
-           <span>We're searching for grants that match your profile. This takes about 60 seconds.</span><br>
-           <a href="${webhookResult.redirect_url}" style="margin-top: 15px; display: inline-block; padding: 10px 20px; background: #667eea; color: white; text-decoration: none; border-radius: 5px;">
-             View Your Dashboard
-           </a>
-         `;
-         
-         // Reset form
-         e.target.reset();
+        const result = await webhookResponse.json();
+        
+        // Hide loading
+        loadingState.classList.remove('active');
+        
+        if (result.success) {
+            // Show success message
+            successMsg.classList.add('active');
+            
+            // Create success details HTML
+            const successHTML = `
+                <div id="successDetails">
+                    <strong>✅ Profile Created Successfully!</strong><br>
+                    <span>User ID: ${result.user_id || 'Generated'}</span><br>
+                    <span>We're searching for grants that match your profile. This takes about 60 seconds.</span><br>
+                    <a href="dashboard.html?user_id=${result.user_id}" 
+                       style="margin-top: 15px; display: inline-block; padding: 10px 20px; 
+                              background: #667eea; color: white; text-decoration: none; 
+                              border-radius: 5px;">
+                        View Your Dashboard
+                    </a>
+                </div>
+            `;
+            
+            successMsg.innerHTML = successHTML;
+            
+            // Reset form
+            e.target.reset();
+            successMsg.scrollIntoView({ behavior: 'smooth' });
             
         } else {
             // No grants found, but profile created
             console.log('⚠️ Profile created but no grants found yet');
             
             successMsg.classList.add('active');
-            document.getElementById('successDetails').innerHTML = `
+            successMsg.innerHTML = `
                 <strong>Profile created successfully!</strong><br>
-                <span style="font-size: 14px;">We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear. You'll receive an email at ${formData.get('email')}.</span>
+                <span style="font-size: 14px;">We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear. You'll receive an email at ${n8nPayload.email}.</span>
             `;
+            successMsg.scrollIntoView({ behavior: 'smooth' });
         }
-        
-        // Reset form
-        e.target.reset();
-        successMsg.scrollIntoView({ behavior: 'smooth' });
         
         console.log('✅ PROCESS COMPLETE!');
         
