@@ -32,6 +32,15 @@
       margin-bottom: 10px;
     }
     
+    .debug-info {
+      background: #f0f0f0;
+      padding: 15px;
+      border-radius: 8px;
+      margin: 20px 0;
+      font-family: monospace;
+      font-size: 12px;
+    }
+    
     .loading {
       text-align: center;
       padding: 60px 20px;
@@ -91,72 +100,37 @@
       border-radius: 4px;
     }
     
-    .grant-details {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-      gap: 16px;
+    .error {
+      background: #fee;
+      border: 2px solid #fcc;
+      color: #c33;
+      padding: 20px;
+      border-radius: 8px;
       margin: 20px 0;
     }
     
-    .detail-item {
-      background: #f8f9fa;
-      padding: 12px;
+    .success {
+      background: #efe;
+      border: 2px solid #cfc;
+      color: #3c3;
+      padding: 20px;
       border-radius: 8px;
+      margin: 20px 0;
     }
-    
-    .detail-item strong {
-      display: block;
-      color: #667eea;
-      margin-bottom: 4px;
-      font-size: 0.9em;
-    }
-    
-    .apply-btn {
-      display: inline-block;
+
+    button {
       background: #667eea;
       color: white;
+      border: none;
       padding: 12px 24px;
-      text-decoration: none;
       border-radius: 8px;
-      margin-top: 16px;
-      font-weight: 600;
-      transition: all 0.3s ease;
+      cursor: pointer;
+      margin: 10px 5px;
+      font-size: 14px;
     }
-    
-    .apply-btn:hover {
+
+    button:hover {
       background: #5568d3;
-      transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
-    }
-    
-    .match-score {
-      display: inline-block;
-      background: #10b981;
-      color: white;
-      padding: 6px 12px;
-      border-radius: 20px;
-      font-size: 0.9em;
-      font-weight: 600;
-      margin-left: 10px;
-    }
-    
-    .no-grants {
-      text-align: center;
-      padding: 60px 20px;
-      color: #666;
-    }
-    
-    .no-grants h2 {
-      color: #667eea;
-      margin-bottom: 16px;
-    }
-    
-    .refresh-info {
-      background: #e3f2fd;
-      border-left: 4px solid #2196f3;
-      padding: 16px;
-      margin-bottom: 24px;
-      border-radius: 4px;
     }
   </style>
 </head>
@@ -165,8 +139,16 @@
     <h1>🎯 Your Matching Grants</h1>
     <p style="color: #666; margin-bottom: 24px;">Grants discovered based on your profile</p>
     
-    <div id="refresh-notice" class="refresh-info" style="display: none;">
-      🔄 Still searching for grants... Auto-refreshing every 10 seconds
+    <div class="debug-info" id="debugInfo">
+      <strong>Debug Information:</strong><br>
+      <span id="debugText">Initializing...</span>
+    </div>
+
+    <div>
+      <button onclick="testConnection()">Test Connection</button>
+      <button onclick="loadAllGrants()">Load All Grants</button>
+      <button onclick="loadUserGrants()">Load My Grants</button>
+      <button onclick="location.reload()">Refresh Page</button>
     </div>
     
     <div id="loading" class="loading">
@@ -179,158 +161,159 @@
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
   <script>
-    // Supabase configuration
+    // Configuration
     const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3MzQ1NTE4ODMsImV4cCI6MjA1MDEyNzg4M30.lqlE3t5ObkvwVAmX40mLTVn-nrzgFB4J6QDnzYZCODY';
-    
-    const supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
     
     // Get user_id from URL
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('user_id');
     
-    if (!userId) {
-      document.getElementById('loading').innerHTML = '<p>❌ No user ID provided. Please submit the form first.</p>';
+    // Initialize Supabase
+    let supabase;
+    
+    function updateDebug(message) {
+      document.getElementById('debugText').innerHTML += '<br>' + message;
+      console.log(message);
     }
     
-    async function loadGrants() {
+    function hideLoading() {
+      document.getElementById('loading').style.display = 'none';
+    }
+    
+    async function testConnection() {
+      updateDebug('🔍 Testing Supabase connection...');
+      
       try {
+        // Try to initialize Supabase
+        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        updateDebug('✅ Supabase client created');
+        
+        // Test simple query
+        const { data, error, count } = await supabase
+          .from('grants')
+          .select('*', { count: 'exact', head: true });
+        
+        if (error) {
+          updateDebug('❌ Error: ' + error.message);
+        } else {
+          updateDebug('✅ Connection successful! Total grants in database: ' + count);
+        }
+      } catch (err) {
+        updateDebug('❌ Exception: ' + err.message);
+      }
+    }
+    
+    async function loadAllGrants() {
+      hideLoading();
+      updateDebug('📊 Loading first 10 grants from database...');
+      
+      try {
+        if (!supabase) {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
+        
         const { data: grants, error } = await supabase
           .from('grants')
           .select('*')
-          .eq('discovered_by_user_id', userId)
-          .order('created_at', { ascending: false });
+          .limit(10);
         
-        if (error) throw error;
+        if (error) {
+          document.getElementById('grants-container').innerHTML = 
+            `<div class="error">Error: ${error.message}</div>`;
+          updateDebug('❌ Error loading grants: ' + error.message);
+        } else {
+          updateDebug(`✅ Loaded ${grants.length} grants`);
+          displayGrants(grants);
+        }
+      } catch (err) {
+        document.getElementById('grants-container').innerHTML = 
+          `<div class="error">Exception: ${err.message}</div>`;
+        updateDebug('❌ Exception: ' + err.message);
+      }
+    }
+    
+    async function loadUserGrants() {
+      hideLoading();
+      updateDebug(`📊 Loading grants for user: ${userId}...`);
+      
+      try {
+        if (!supabase) {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+        }
         
-        displayGrants(grants);
+        const { data: grants, error } = await supabase
+          .from('grants')
+          .select('*')
+          .eq('discovered_by_user_id', userId);
         
-      } catch (error) {
-        console.error('Error loading grants:', error);
-        document.getElementById('loading').innerHTML = `
-          <p>❌ Error loading grants: ${error.message}</p>
-        `;
+        if (error) {
+          document.getElementById('grants-container').innerHTML = 
+            `<div class="error">Error: ${error.message}</div>`;
+          updateDebug('❌ Error: ' + error.message);
+        } else {
+          updateDebug(`✅ Found ${grants.length} grants for this user`);
+          displayGrants(grants);
+        }
+      } catch (err) {
+        document.getElementById('grants-container').innerHTML = 
+          `<div class="error">Exception: ${err.message}</div>`;
+        updateDebug('❌ Exception: ' + err.message);
       }
     }
     
     function displayGrants(grants) {
-      const loading = document.getElementById('loading');
       const container = document.getElementById('grants-container');
-      const refreshNotice = document.getElementById('refresh-notice');
-      
-      loading.style.display = 'none';
       
       if (!grants || grants.length === 0) {
-        refreshNotice.style.display = 'block';
-        container.innerHTML = `
-          <div class="no-grants">
-            <h2>⏳ Still Searching...</h2>
-            <p>We're analyzing grant websites to find matches for your profile.</p>
-            <p>This usually takes 30-90 seconds. The page will refresh automatically.</p>
-          </div>
-        `;
+        container.innerHTML = '<div class="success">No grants found.</div>';
         return;
       }
       
-      refreshNotice.style.display = 'none';
-      
       const grantsHTML = grants.map(grant => `
         <div class="grant-card">
-          <h3>
-            ${grant.grant_name || 'Untitled Grant'}
-            ${grant.match_score ? `<span class="match-score">${grant.match_score}% Match</span>` : ''}
-          </h3>
+          <h3>${grant.grant_name || 'Untitled Grant'}</h3>
           <div class="provider">${grant.provider || 'Unknown Provider'}</div>
           
           ${grant.ai_summary ? `
             <div class="summary">
-              <strong>💡 Why this matches you:</strong><br>
+              <strong>💡 Summary:</strong><br>
               ${grant.ai_summary}
             </div>
           ` : ''}
           
           ${grant.description ? `<p>${grant.description}</p>` : ''}
           
-          <div class="grant-details">
-            ${grant.amount_min || grant.amount_max ? `
-              <div class="detail-item">
-                <strong>💰 Funding Amount</strong>
-                ${formatAmount(grant.amount_min, grant.amount_max)}
-              </div>
-            ` : ''}
-            
-            ${grant.deadline ? `
-              <div class="detail-item">
-                <strong>📅 Deadline</strong>
-                ${formatDate(grant.deadline)}
-              </div>
-            ` : ''}
-            
-            ${grant.eligibility ? `
-              <div class="detail-item">
-                <strong>✅ Eligibility</strong>
-                ${grant.eligibility}
-              </div>
-            ` : ''}
-            
-            ${grant.sector && grant.sector.length > 0 ? `
-              <div class="detail-item">
-                <strong>🏢 Sectors</strong>
-                ${grant.sector.join(', ')}
-              </div>
-            ` : ''}
+          <div style="margin-top: 15px; font-size: 0.9em; color: #666;">
+            <strong>Eligibility:</strong> ${grant.eligibility || 'Not specified'}<br>
+            <strong>Created:</strong> ${grant.created_at ? new Date(grant.created_at).toLocaleDateString() : 'Unknown'}
           </div>
-          
-          ${grant.application_url ? `
-            <a href="${grant.application_url}" target="_blank" class="apply-btn">
-              Apply Now →
-            </a>
-          ` : ''}
         </div>
       `).join('');
       
       container.innerHTML = `
-        <div style="margin-bottom: 20px; color: #10b981; font-weight: 600;">
-          ✅ Found ${grants.length} matching grant${grants.length !== 1 ? 's' : ''}!
-        </div>
+        <div class="success">Found ${grants.length} grant${grants.length !== 1 ? 's' : ''}!</div>
         ${grantsHTML}
       `;
     }
     
-    function formatAmount(min, max) {
-      if (min && max) {
-        return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
-      } else if (min) {
-        return `From $${min.toLocaleString()}`;
-      } else if (max) {
-        return `Up to $${max.toLocaleString()}`;
-      }
-      return 'Amount not specified';
+    // Initialize
+    updateDebug('User ID from URL: ' + (userId || 'MISSING!'));
+    updateDebug('Supabase URL: ' + SUPABASE_URL);
+    updateDebug('Click "Test Connection" to begin');
+    
+    if (!userId) {
+      hideLoading();
+      document.getElementById('grants-container').innerHTML = 
+        '<div class="error">❌ No user_id in URL! Please submit the form first.</div>';
+    } else {
+      // Auto-test on load
+      setTimeout(() => {
+        testConnection().then(() => {
+          loadUserGrants();
+        });
+      }, 1000);
     }
-    
-    function formatDate(dateString) {
-      if (!dateString) return 'Not specified';
-      const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
-    }
-    
-    // Load grants on page load
-    loadGrants();
-    
-    // Auto-refresh every 10 seconds for first minute
-    let refreshCount = 0;
-    const refreshInterval = setInterval(() => {
-      refreshCount++;
-      loadGrants();
-      if (refreshCount >= 6) {
-        clearInterval(refreshInterval);
-        document.getElementById('refresh-notice').style.display = 'none';
-      }
-    }, 10000);
   </script>
 </body>
 </html>
