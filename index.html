@@ -511,31 +511,25 @@
         
         // Build n8n webhook payload
         const n8nPayload = {
-            email: formData.get('email'),
-            organization_name: formData.get('organization_name'),
-            contact_person: formData.get('contact_person'),
-            phone: formData.get('phone') || null,
-            organization_type: formData.get('organization_type'),
-            num_employees: formData.get('num_employees'),
-            years_operation: formData.get('years_operation'),
-            location: formData.get('location'),
-            primary_sector: formData.get('primary_sector'),
-            secondary_sectors: secondary_sectors,
-            sector: allSectors,
-            specific_interests: formData.get('specific_interests') || null,
-            preferred_grant_size: formData.get('preferred_grant_size'),
-            project_type: project_type,
-            urgency: formData.get('urgency'),
-            alert_frequency: formData.get('alert_frequency'),
-            notification_email: document.querySelector('input[name="notification_email"]').checked,
-            interests: [
-                ...project_type, 
-                ...(formData.get('specific_interests') ? 
-                    formData.get('specific_interests').split(',').map(i => i.trim()) : 
-                    [])
-            ],
-            funding_range: formData.get('preferred_grant_size')
-        };
+           body: {  // ← ADD THIS WRAPPER
+               email: formData.get('email'),
+               organization_name: formData.get('organization_name'),
+               contact_person: formData.get('contact_person') || '',  // ← Make sure this is here
+               phone: formData.get('phone') || '',
+               organization_type: formData.get('organization_type'),
+               num_employees: formData.get('num_employees'),
+               years_operation: formData.get('years_operation'),
+               location: formData.get('location'),
+               primary_sector: formData.get('primary_sector'),
+               secondary_sectors: secondary_sectors,
+               specific_interests: formData.get('specific_interests') || '',
+               preferred_grant_size: formData.get('preferred_grant_size'),
+               project_type: project_type,
+               urgency: formData.get('urgency'),
+               alert_frequency: formData.get('alert_frequency'),
+               notification_email: document.querySelector('input[name="notification_email"]').checked
+           }
+       };
         
         console.log('📦 Payload prepared:', n8nPayload);
         
