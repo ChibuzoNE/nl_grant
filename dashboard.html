@@ -5,19 +5,13 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Your Grants Dashboard</title>
   <style>
-    * {
-      margin: 0;
-      padding: 0;
-      box-sizing: border-box;
-    }
-    
+    * { margin: 0; padding: 0; box-sizing: border-box; }
     body {
-      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
       background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
       min-height: 100vh;
       padding: 20px;
     }
-    
     .container {
       max-width: 1200px;
       margin: 0 auto;
@@ -26,98 +20,24 @@
       padding: 40px;
       box-shadow: 0 20px 60px rgba(0,0,0,0.3);
     }
-    
-    h1 {
-      color: #667eea;
-      margin-bottom: 10px;
-    }
-    
-    .debug-info {
+    h1 { color: #667eea; margin-bottom: 10px; }
+    .status {
       background: #f0f0f0;
       padding: 15px;
       border-radius: 8px;
       margin: 20px 0;
       font-family: monospace;
-      font-size: 12px;
+      font-size: 13px;
     }
-    
-    .loading {
-      text-align: center;
-      padding: 60px 20px;
-      color: #666;
-    }
-    
-    .spinner {
-      border: 4px solid #f3f3f3;
-      border-top: 4px solid #667eea;
-      border-radius: 50%;
-      width: 50px;
-      height: 50px;
-      animation: spin 1s linear infinite;
-      margin: 20px auto;
-    }
-    
-    @keyframes spin {
-      0% { transform: rotate(0deg); }
-      100% { transform: rotate(360deg); }
-    }
-    
     .grant-card {
       border: 2px solid #e0e0e0;
       border-radius: 12px;
       padding: 24px;
       margin: 20px 0;
-      transition: all 0.3s ease;
       background: white;
     }
-    
-    .grant-card:hover {
-      box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
-      border-color: #667eea;
-      transform: translateY(-2px);
-    }
-    
-    .grant-card h3 {
-      color: #333;
-      margin-bottom: 8px;
-      font-size: 1.4em;
-    }
-    
-    .grant-card .provider {
-      color: #667eea;
-      font-weight: 600;
-      margin-bottom: 12px;
-      font-size: 1.1em;
-    }
-    
-    .grant-card .summary {
-      color: #555;
-      line-height: 1.6;
-      margin: 16px 0;
-      padding: 16px;
-      background: #f8f9fa;
-      border-left: 4px solid #667eea;
-      border-radius: 4px;
-    }
-    
-    .error {
-      background: #fee;
-      border: 2px solid #fcc;
-      color: #c33;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-    
-    .success {
-      background: #efe;
-      border: 2px solid #cfc;
-      color: #3c3;
-      padding: 20px;
-      border-radius: 8px;
-      margin: 20px 0;
-    }
-
+    .grant-card h3 { color: #333; margin-bottom: 10px; }
+    .provider { color: #667eea; font-weight: 600; margin-bottom: 10px; }
     button {
       background: #667eea;
       color: white;
@@ -125,195 +45,140 @@
       padding: 12px 24px;
       border-radius: 8px;
       cursor: pointer;
-      margin: 10px 5px;
+      margin: 5px;
       font-size: 14px;
     }
-
-    button:hover {
-      background: #5568d3;
-    }
+    button:hover { background: #5568d3; }
+    .error { background: #fee; border: 2px solid #fcc; color: #c33; padding: 15px; border-radius: 8px; margin: 10px 0; }
+    .success { background: #efe; border: 2px solid #cfc; color: #3c3; padding: 15px; border-radius: 8px; margin: 10px 0; }
   </style>
 </head>
 <body>
   <div class="container">
     <h1>🎯 Your Matching Grants</h1>
-    <p style="color: #666; margin-bottom: 24px;">Grants discovered based on your profile</p>
+    <p style="color: #666; margin-bottom: 20px;">Grants discovered based on your profile</p>
     
-    <div class="debug-info" id="debugInfo">
-      <strong>Debug Information:</strong><br>
-      <span id="debugText">Initializing...</span>
-    </div>
-
+    <div class="status" id="status">Initializing...</div>
+    
     <div>
-      <button onclick="testConnection()">Test Connection</button>
-      <button onclick="loadAllGrants()">Load All Grants</button>
-      <button onclick="loadUserGrants()">Load My Grants</button>
-      <button onclick="location.reload()">Refresh Page</button>
+      <button onclick="testAPI()">Test API</button>
+      <button onclick="loadGrants()">Load Grants</button>
+      <button onclick="showDebug()">Show Debug Info</button>
     </div>
     
-    <div id="loading" class="loading">
-      <div class="spinner"></div>
-      <p>Loading your grants...</p>
-    </div>
-    
-    <div id="grants-container"></div>
+    <div id="results"></div>
   </div>
 
-  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
   <script>
-    // Configuration
-    const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
-    const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
+    const STATUS = document.getElementById('status');
+    const RESULTS = document.getElementById('results');
     
-    // Get user_id from URL
+    // Config
+    const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
+    const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
+    
     const urlParams = new URLSearchParams(window.location.search);
     const userId = urlParams.get('user_id');
     
-    // Initialize Supabase
     let supabase;
     
-    function updateDebug(message) {
-      document.getElementById('debugText').innerHTML += '<br>' + message;
-      console.log(message);
+    function log(msg) {
+      STATUS.innerHTML += '<br>' + msg;
+      console.log(msg);
     }
     
-    function hideLoading() {
-      document.getElementById('loading').style.display = 'none';
+    function showDebug() {
+      log('URL: ' + window.location.href);
+      log('User ID: ' + userId);
+      log('Supabase loaded: ' + (typeof window.supabase !== 'undefined'));
+      log('Client initialized: ' + (supabase !== undefined));
     }
     
-    async function testConnection() {
-      updateDebug('🔍 Testing Supabase connection...');
+    async function testAPI() {
+      log('Testing Supabase connection...');
       
       try {
-        // Try to initialize Supabase
-        supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        updateDebug('✅ Supabase client created');
+        if (!supabase) {
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+          log('✅ Client created');
+        }
         
-        // Test simple query
-        const { data, error, count } = await supabase
+        const { count, error } = await supabase
           .from('grants')
           .select('*', { count: 'exact', head: true });
         
         if (error) {
-          updateDebug('❌ Error: ' + error.message);
+          log('❌ Error: ' + error.message);
+          RESULTS.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
         } else {
-          updateDebug('✅ Connection successful! Total grants in database: ' + count);
+          log('✅ Connected! Total grants: ' + count);
+          RESULTS.innerHTML = '<div class="success">Connected! Found ' + count + ' grants in database</div>';
         }
-      } catch (err) {
-        updateDebug('❌ Exception: ' + err.message);
+      } catch (e) {
+        log('❌ Exception: ' + e.message);
+        RESULTS.innerHTML = '<div class="error">Exception: ' + e.message + '</div>';
       }
     }
     
-    async function loadAllGrants() {
-      hideLoading();
-      updateDebug('📊 Loading first 10 grants from database...');
+    async function loadGrants() {
+      log('Loading grants...');
       
       try {
         if (!supabase) {
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
         }
         
-        const { data: grants, error } = await supabase
-          .from('grants')
-          .select('*')
-          .limit(10);
+        const query = userId 
+          ? supabase.from('grants').select('*').eq('discovered_by_user_id', userId).limit(20)
+          : supabase.from('grants').select('*').limit(10);
         
-        if (error) {
-          document.getElementById('grants-container').innerHTML = 
-            `<div class="error">Error: ${error.message}</div>`;
-          updateDebug('❌ Error loading grants: ' + error.message);
-        } else {
-          updateDebug(`✅ Loaded ${grants.length} grants`);
-          displayGrants(grants);
-        }
-      } catch (err) {
-        document.getElementById('grants-container').innerHTML = 
-          `<div class="error">Exception: ${err.message}</div>`;
-        updateDebug('❌ Exception: ' + err.message);
-      }
-    }
-    
-    async function loadUserGrants() {
-      hideLoading();
-      updateDebug(`📊 Loading grants for user: ${userId}...`);
-      
-      try {
-        if (!supabase) {
-          supabase = window.supabase.createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
-        }
-        
-        const { data: grants, error } = await supabase
-          .from('grants')
-          .select('*')
-          .eq('discovered_by_user_id', userId);
+        const { data: grants, error } = await query;
         
         if (error) {
-          document.getElementById('grants-container').innerHTML = 
-            `<div class="error">Error: ${error.message}</div>`;
-          updateDebug('❌ Error: ' + error.message);
-        } else {
-          updateDebug(`✅ Found ${grants.length} grants for this user`);
-          displayGrants(grants);
+          log('❌ Error: ' + error.message);
+          RESULTS.innerHTML = '<div class="error">Error: ' + error.message + '</div>';
+          return;
         }
-      } catch (err) {
-        document.getElementById('grants-container').innerHTML = 
-          `<div class="error">Exception: ${err.message}</div>`;
-        updateDebug('❌ Exception: ' + err.message);
-      }
-    }
-    
-    function displayGrants(grants) {
-      const container = document.getElementById('grants-container');
-      
-      if (!grants || grants.length === 0) {
-        container.innerHTML = '<div class="success">No grants found.</div>';
-        return;
-      }
-      
-      const grantsHTML = grants.map(grant => `
-        <div class="grant-card">
-          <h3>${grant.grant_name || 'Untitled Grant'}</h3>
-          <div class="provider">${grant.provider || 'Unknown Provider'}</div>
-          
-          ${grant.ai_summary ? `
-            <div class="summary">
-              <strong>💡 Summary:</strong><br>
-              ${grant.ai_summary}
+        
+        log('✅ Found ' + grants.length + ' grants');
+        
+        if (grants.length === 0) {
+          RESULTS.innerHTML = '<div class="error">No grants found for user ' + userId + '</div>';
+          return;
+        }
+        
+        const html = grants.map(g => `
+          <div class="grant-card">
+            <h3>${g.grant_name || 'Untitled'}</h3>
+            <div class="provider">${g.provider || 'Unknown'}</div>
+            <p>${g.description || g.ai_summary || 'No description'}</p>
+            <div style="margin-top: 10px; font-size: 0.9em; color: #666;">
+              Eligibility: ${g.eligibility || 'Not specified'}
             </div>
-          ` : ''}
-          
-          ${grant.description ? `<p>${grant.description}</p>` : ''}
-          
-          <div style="margin-top: 15px; font-size: 0.9em; color: #666;">
-            <strong>Eligibility:</strong> ${grant.eligibility || 'Not specified'}<br>
-            <strong>Created:</strong> ${grant.created_at ? new Date(grant.created_at).toLocaleDateString() : 'Unknown'}
           </div>
-        </div>
-      `).join('');
+        `).join('');
+        
+        RESULTS.innerHTML = '<div class="success">Found ' + grants.length + ' grants!</div>' + html;
+        
+      } catch (e) {
+        log('❌ Exception: ' + e.message);
+        RESULTS.innerHTML = '<div class="error">Exception: ' + e.message + '</div>';
+      }
+    }
+    
+    // Auto-initialize
+    window.addEventListener('load', function() {
+      log('Page loaded');
+      log('User ID: ' + (userId || 'MISSING'));
       
-      container.innerHTML = `
-        <div class="success">Found ${grants.length} grant${grants.length !== 1 ? 's' : ''}!</div>
-        ${grantsHTML}
-      `;
-    }
-    
-    // Initialize
-    updateDebug('User ID from URL: ' + (userId || 'MISSING!'));
-    updateDebug('Supabase URL: ' + SUPABASE_URL);
-    updateDebug('Click "Test Connection" to begin');
-    
-    if (!userId) {
-      hideLoading();
-      document.getElementById('grants-container').innerHTML = 
-        '<div class="error">❌ No user_id in URL! Please submit the form first.</div>';
-    } else {
-      // Auto-test on load
-      setTimeout(() => {
-        testConnection().then(() => {
-          loadUserGrants();
-        });
-      }, 1000);
-    }
+      if (typeof window.supabase === 'undefined') {
+        log('❌ Supabase library not loaded!');
+      } else {
+        log('✅ Supabase library loaded');
+        setTimeout(testAPI, 500);
+      }
+    });
   </script>
 </body>
 </html>
