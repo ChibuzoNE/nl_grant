@@ -130,8 +130,8 @@
         }
         
         const query = userId 
-          ? supabase.from('grants').select('*').eq('discovered_by_user_id', userId).limit(20)
-          : supabase.from('grants').select('*').limit(10);
+          ? supabase.from('grants').select('*').eq('discovered_by_user_id', userId)
+          : supabase.from('grants').select('*');
         
         const { data: grants, error } = await query;
         
