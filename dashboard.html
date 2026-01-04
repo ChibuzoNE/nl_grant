@@ -838,12 +838,55 @@
                 </div>
               ` : ''}
               
-              ${grant.eligibility ? `
+              ${grant.eligibility_score ? `
+              <div class="detail-item" style="grid-column: 1 / -1;">
+                <strong>🎯 AI Eligibility Match</strong>
+                <div class="value">
+                  <div style="display: flex; align-items: center; gap: 15px; margin-bottom: 10px;">
+                    <div style="flex: 1; background: #e5e7eb; border-radius: 10px; height: 24px; overflow: hidden; position: relative;">
+                      <div style="width: ${grant.eligibility_score}%; 
+                                  background: ${grant.eligibility_score >= 85 ? 'linear-gradient(90deg, #10b981, #059669)' : 
+                                               grant.eligibility_score >= 70 ? 'linear-gradient(90deg, #3b82f6, #2563eb)' : 
+                                               grant.eligibility_score >= 55 ? 'linear-gradient(90deg, #f59e0b, #d97706)' : 
+                                               'linear-gradient(90deg, #6b7280, #4b5563)'}; 
+                                  height: 100%; 
+                                  transition: width 0.5s ease;
+                                  border-radius: 10px;">
+                      </div>
+                      <div style="position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); 
+                                  font-size: 12px; font-weight: 600; color: white; text-shadow: 0 1px 2px rgba(0,0,0,0.3);">
+                        ${grant.eligibility_score}% Match
+                      </div>
+                    </div>
+                    <div style="min-width: 120px; text-align: right;">
+                      <div style="font-weight: 700; font-size: 1.1em; color: ${grant.eligibility_score >= 85 ? '#10b981' : 
+                                                                                 grant.eligibility_score >= 70 ? '#3b82f6' : 
+                                                                                 grant.eligibility_score >= 55 ? '#f59e0b' : '#6b7280'};">
+                        ${grant.eligibility_level || 'Calculated'}
+                      </div>
+                      <div style="font-size: 0.85em; color: #666;">
+                        ${grant.eligibility_method === 'ai_semantic' ? '✨ AI-Powered' : 'Rule-Based'}
+                      </div>
+                    </div>
+                  </div>
+                  ${grant.eligibility_summary ? `
+                    <div style="background: #f8f9fa; padding: 12px; border-radius: 8px; 
+                                border-left: 4px solid ${grant.eligibility_score >= 85 ? '#10b981' : 
+                                                        grant.eligibility_score >= 70 ? '#3b82f6' : 
+                                                        grant.eligibility_score >= 55 ? '#f59e0b' : '#6b7280'};">
+                      <div style="white-space: pre-line; font-size: 0.95em; line-height: 1.6;">
+                        ${grant.eligibility_summary}
+                      </div>
+                    </div>
+                  ` : ''}
+                  </div>
+                </div>
+              ` : `
                 <div class="detail-item">
                   <strong>✅ Eligibility</strong>
-                  <div class="value">${grant.eligibility}</div>
+                  <div class="value">${grant.eligibility || 'Not specified'}</div>
                 </div>
-              ` : ''}
+              `}
             </div>
             
             ${application?.notes ? `
