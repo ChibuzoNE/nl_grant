@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Your Grants Dashboard - Enhanced</title>
+  <title>Your Grants Dashboard - Phase 2</title>
   <style>
     * {
       margin: 0;
@@ -54,6 +54,12 @@
       padding: 15px 25px;
       border-radius: 12px;
       text-align: center;
+      cursor: pointer;
+      transition: transform 0.2s;
+    }
+    
+    .stat-card:hover {
+      transform: translateY(-2px);
     }
     
     .stat-card .number {
@@ -65,6 +71,34 @@
     .stat-card .label {
       font-size: 0.9em;
       opacity: 0.9;
+    }
+    
+    .tabs {
+      display: flex;
+      gap: 10px;
+      border-bottom: 2px solid #e0e0e0;
+      margin-bottom: 30px;
+    }
+    
+    .tab {
+      padding: 12px 24px;
+      background: none;
+      border: none;
+      border-bottom: 3px solid transparent;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      color: #666;
+      transition: all 0.3s;
+    }
+    
+    .tab:hover {
+      color: #667eea;
+    }
+    
+    .tab.active {
+      color: #667eea;
+      border-bottom-color: #667eea;
     }
     
     .filters {
@@ -113,9 +147,18 @@
       position: relative;
     }
     
+    .grant-card.saved {
+      border-color: #f59e0b;
+      background: #fffbeb;
+    }
+    
+    .grant-card.applied {
+      border-color: #10b981;
+      background: #f0fdf4;
+    }
+    
     .grant-card:hover {
       box-shadow: 0 8px 16px rgba(102, 126, 234, 0.2);
-      border-color: #667eea;
       transform: translateY(-2px);
     }
     
@@ -145,6 +188,29 @@
       display: flex;
       align-items: center;
       gap: 8px;
+    }
+    
+    .status-badges {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+    
+    .badge {
+      padding: 6px 12px;
+      border-radius: 16px;
+      font-size: 0.85em;
+      font-weight: 600;
+    }
+    
+    .badge.saved {
+      background: #fef3c7;
+      color: #92400e;
+    }
+    
+    .badge.applied {
+      background: #d1fae5;
+      color: #065f46;
     }
     
     .match-badge {
@@ -202,20 +268,22 @@
       font-size: 0.95em;
     }
     
-    .tags {
-      display: flex;
-      flex-wrap: wrap;
-      gap: 8px;
+    .grant-notes {
+      background: #fffbeb;
+      border: 2px solid #fbbf24;
+      border-radius: 8px;
+      padding: 12px;
       margin-top: 16px;
     }
     
-    .tag {
-      background: #e0e7ff;
-      color: #4338ca;
-      padding: 6px 12px;
-      border-radius: 16px;
-      font-size: 0.85em;
-      font-weight: 500;
+    .grant-notes textarea {
+      width: 100%;
+      min-height: 80px;
+      padding: 10px;
+      border: 1px solid #e0e0e0;
+      border-radius: 6px;
+      font-family: inherit;
+      resize: vertical;
     }
     
     .grant-actions {
@@ -224,10 +292,11 @@
       margin-top: 20px;
       padding-top: 20px;
       border-top: 1px solid #e0e0e0;
+      flex-wrap: wrap;
     }
     
     .btn {
-      padding: 12px 24px;
+      padding: 10px 20px;
       border: none;
       border-radius: 8px;
       font-size: 14px;
@@ -246,7 +315,6 @@
     .btn-primary:hover {
       background: #5568d3;
       transform: translateY(-2px);
-      box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
     }
     
     .btn-secondary {
@@ -260,20 +328,94 @@
       color: white;
     }
     
-    .deadline-warning {
-      background: #fef3c7;
-      border-left: 4px solid #f59e0b;
-      padding: 12px;
-      border-radius: 4px;
-      margin-top: 12px;
-      font-size: 0.9em;
-      color: #92400e;
+    .btn-success {
+      background: #10b981;
+      color: white;
     }
     
-    .deadline-urgent {
-      background: #fee2e2;
-      border-left-color: #dc2626;
-      color: #7f1d1d;
+    .btn-success:hover {
+      background: #059669;
+    }
+    
+    .btn-warning {
+      background: #f59e0b;
+      color: white;
+    }
+    
+    .btn-warning:hover {
+      background: #d97706;
+    }
+    
+    .btn.active {
+      background: #667eea;
+      color: white;
+    }
+    
+    .modal {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background: rgba(0,0,0,0.5);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+    
+    .modal.active {
+      display: flex;
+    }
+    
+    .modal-content {
+      background: white;
+      padding: 30px;
+      border-radius: 16px;
+      max-width: 500px;
+      width: 90%;
+      max-height: 90vh;
+      overflow-y: auto;
+    }
+    
+    .modal-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .modal-header h2 {
+      color: #333;
+    }
+    
+    .close-modal {
+      background: none;
+      border: none;
+      font-size: 24px;
+      cursor: pointer;
+      color: #666;
+    }
+    
+    .form-group {
+      margin-bottom: 20px;
+    }
+    
+    .form-group label {
+      display: block;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: #333;
+    }
+    
+    .form-group input,
+    .form-group select,
+    .form-group textarea {
+      width: 100%;
+      padding: 10px;
+      border: 2px solid #e0e0e0;
+      border-radius: 8px;
+      font-size: 14px;
     }
     
     .loading {
@@ -308,25 +450,6 @@
       margin-bottom: 16px;
     }
     
-    .sort-controls {
-      display: flex;
-      gap: 10px;
-      align-items: center;
-      margin-bottom: 20px;
-    }
-    
-    .sort-controls label {
-      font-weight: 600;
-      color: #333;
-    }
-    
-    .sort-controls select {
-      padding: 8px 12px;
-      border: 2px solid #e0e0e0;
-      border-radius: 8px;
-      font-size: 14px;
-    }
-    
     @media (max-width: 768px) {
       .container {
         padding: 20px;
@@ -343,6 +466,14 @@
       .grant-details {
         grid-template-columns: 1fr;
       }
+      
+      .grant-actions {
+        flex-direction: column;
+      }
+      
+      .btn {
+        width: 100%;
+      }
     }
   </style>
 </head>
@@ -350,10 +481,16 @@
   <div class="container">
     <div class="header">
       <div>
-        <h1>🎯 Your Matching Grants</h1>
-        <p style="color: #666; margin-top: 8px;">Personalized grant recommendations</p>
+        <h1>🎯 Your Grants Dashboard</h1>
+        <p style="color: #666; margin-top: 8px;">Manage and track your grant opportunities</p>
       </div>
       <div class="header-stats" id="headerStats"></div>
+    </div>
+    
+    <div class="tabs">
+      <button class="tab active" data-tab="all">All Grants</button>
+      <button class="tab" data-tab="saved">Saved (0)</button>
+      <button class="tab" data-tab="applied">Applied (0)</button>
     </div>
     
     <div class="filters">
@@ -401,6 +538,42 @@
     
     <div id="grants-container"></div>
   </div>
+  
+  <!-- Application Tracking Modal -->
+  <div class="modal" id="applicationModal">
+    <div class="modal-content">
+      <div class="modal-header">
+        <h2>Track Application</h2>
+        <button class="close-modal" onclick="closeModal()">&times;</button>
+      </div>
+      <form id="applicationForm">
+        <input type="hidden" id="modalGrantId">
+        <div class="form-group">
+          <label>Application Status</label>
+          <select id="appStatus" required>
+            <option value="planning">Planning to Apply</option>
+            <option value="applied">Applied</option>
+            <option value="approved">Approved</option>
+            <option value="rejected">Rejected</option>
+            <option value="withdrawn">Withdrawn</option>
+          </select>
+        </div>
+        <div class="form-group">
+          <label>Application Date</label>
+          <input type="date" id="appDate">
+        </div>
+        <div class="form-group">
+          <label>Amount Requested</label>
+          <input type="number" id="appAmount" placeholder="$0">
+        </div>
+        <div class="form-group">
+          <label>Notes</label>
+          <textarea id="appNotes" rows="4" placeholder="Add notes about this application..."></textarea>
+        </div>
+        <button type="submit" class="btn btn-primary" style="width: 100%;">Save Application</button>
+      </form>
+    </div>
+  </div>
 
   <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.39.0/dist/umd/supabase.min.js"></script>
   <script>
@@ -415,27 +588,22 @@
     
     let allGrants = [];
     let filteredGrants = [];
+    let savedGrants = new Set();
+    let appliedGrants = new Map();
+    let currentTab = 'all';
     
     // Utility functions
     function formatAmount(min, max) {
-      if (min && max) {
-        return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
-      } else if (min) {
-        return `From $${min.toLocaleString()}`;
-      } else if (max) {
-        return `Up to $${max.toLocaleString()}`;
-      }
+      if (min && max) return `$${min.toLocaleString()} - $${max.toLocaleString()}`;
+      if (min) return `From $${min.toLocaleString()}`;
+      if (max) return `Up to $${max.toLocaleString()}`;
       return 'Amount not specified';
     }
     
     function formatDate(dateString) {
       if (!dateString) return null;
       const date = new Date(dateString);
-      return date.toLocaleDateString('en-US', { 
-        year: 'numeric', 
-        month: 'long', 
-        day: 'numeric' 
-      });
+      return date.toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' });
     }
     
     function getDaysUntilDeadline(dateString) {
@@ -443,14 +611,42 @@
       const deadline = new Date(dateString);
       const today = new Date();
       const diffTime = deadline - today;
-      const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-      return diffDays;
+      return Math.ceil(diffTime / (1000 * 60 * 60 * 24));
     }
     
     function getMatchBadgeClass(score) {
       if (score >= 80) return 'high';
       if (score >= 60) return 'medium';
       return 'low';
+    }
+    
+    async function loadUserData() {
+      try {
+        // Load saved grants
+        const { data: saved } = await supabase
+          .from('user_saved_grants')
+          .select('grant_id')
+          .eq('user_id', userId);
+        
+        savedGrants = new Set(saved?.map(s => s.grant_id) || []);
+        
+        // Load applications
+        const { data: apps } = await supabase
+          .from('grant_applications')
+          .select('*')
+          .eq('user_id', userId);
+        
+        appliedGrants = new Map(apps?.map(a => [a.grant_id, a]) || []);
+        
+        updateTabCounts();
+      } catch (error) {
+        console.error('Error loading user data:', error);
+      }
+    }
+    
+    function updateTabCounts() {
+      document.querySelector('[data-tab="saved"]').textContent = `Saved (${savedGrants.size})`;
+      document.querySelector('[data-tab="applied"]').textContent = `Applied (${appliedGrants.size})`;
     }
     
     function displayStats() {
@@ -463,20 +659,117 @@
       const highMatch = filteredGrants.filter(g => (g.match_score || 75) >= 80).length;
       
       document.getElementById('headerStats').innerHTML = `
-        <div class="stat-card">
+        <div class="stat-card" onclick="switchTab('all')">
           <span class="number">${totalGrants}</span>
           <span class="label">Total Grants</span>
         </div>
-        <div class="stat-card">
-          <span class="number">${highMatch}</span>
-          <span class="label">High Matches</span>
+        <div class="stat-card" onclick="switchTab('saved')">
+          <span class="number">${savedGrants.size}</span>
+          <span class="label">Saved</span>
         </div>
         <div class="stat-card">
           <span class="number">${urgentGrants}</span>
-          <span class="label">Urgent Deadlines</span>
+          <span class="label">Urgent</span>
         </div>
       `;
     }
+    
+    async function toggleSave(grantId) {
+      try {
+        if (savedGrants.has(grantId)) {
+          // Unsave
+          await supabase
+            .from('user_saved_grants')
+            .delete()
+            .eq('user_id', userId)
+            .eq('grant_id', grantId);
+          
+          savedGrants.delete(grantId);
+        } else {
+          // Save
+          await supabase
+            .from('user_saved_grants')
+            .insert({ user_id: userId, grant_id: grantId });
+          
+          savedGrants.add(grantId);
+        }
+        
+        updateTabCounts();
+        filterAndSortGrants();
+      } catch (error) {
+        console.error('Error toggling save:', error);
+        alert('Error saving grant. Please try again.');
+      }
+    }
+    
+    function openApplicationModal(grantId) {
+      document.getElementById('modalGrantId').value = grantId;
+      
+      const existing = appliedGrants.get(grantId);
+      if (existing) {
+        document.getElementById('appStatus').value = existing.status;
+        document.getElementById('appDate').value = existing.applied_at ? existing.applied_at.split('T')[0] : '';
+        document.getElementById('appAmount').value = existing.amount_requested || '';
+        document.getElementById('appNotes').value = existing.notes || '';
+      } else {
+        document.getElementById('appStatus').value = 'planning';
+        document.getElementById('appDate').value = '';
+        document.getElementById('appAmount').value = '';
+        document.getElementById('appNotes').value = '';
+      }
+      
+      document.getElementById('applicationModal').classList.add('active');
+    }
+    
+    function closeModal() {
+      document.getElementById('applicationModal').classList.remove('active');
+    }
+    
+    document.getElementById('applicationForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      
+      const grantId = document.getElementById('modalGrantId').value;
+      const appData = {
+        user_id: userId,
+        grant_id: grantId,
+        status: document.getElementById('appStatus').value,
+        applied_at: document.getElementById('appDate').value || null,
+        amount_requested: document.getElementById('appAmount').value || null,
+        notes: document.getElementById('appNotes').value || null,
+        updated_at: new Date().toISOString()
+      };
+      
+      try {
+        const { data, error } = await supabase
+          .from('grant_applications')
+          .upsert(appData, { onConflict: 'user_id,grant_id' })
+          .select()
+          .single();
+        
+        if (error) throw error;
+        
+        appliedGrants.set(grantId, data);
+        updateTabCounts();
+        closeModal();
+        filterAndSortGrants();
+        
+        alert('Application tracking saved!');
+      } catch (error) {
+        console.error('Error saving application:', error);
+        alert('Error saving application. Please try again.');
+      }
+    });
+    
+    function switchTab(tab) {
+      currentTab = tab;
+      document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+      document.querySelector(`[data-tab="${tab}"]`).classList.add('active');
+      filterAndSortGrants();
+    }
+    
+    document.querySelectorAll('.tab').forEach(tab => {
+      tab.addEventListener('click', () => switchTab(tab.dataset.tab));
+    });
     
     function displayGrants(grants) {
       const container = document.getElementById('grants-container');
@@ -486,20 +779,20 @@
         container.innerHTML = `
           <div class="no-grants">
             <h2>No grants found</h2>
-            <p>Try adjusting your filters or check back later for new opportunities.</p>
+            <p>Try adjusting your filters or switching tabs.</p>
           </div>
         `;
         return;
       }
       
       const grantsHTML = grants.map(grant => {
+        const isSaved = savedGrants.has(grant.grant_id);
+        const application = appliedGrants.get(grant.grant_id);
         const daysUntil = getDaysUntilDeadline(grant.deadline);
         const matchClass = getMatchBadgeClass(grant.match_score || 75);
-        const deadlineWarning = daysUntil && daysUntil <= 30;
-        const deadlineUrgent = daysUntil && daysUntil <= 14;
         
         return `
-          <div class="grant-card">
+          <div class="grant-card ${isSaved ? 'saved' : ''} ${application ? 'applied' : ''}">
             <div class="grant-header">
               <div class="grant-title">
                 <h3>${grant.grant_name || 'Untitled Grant'}</h3>
@@ -507,8 +800,14 @@
                   🏛️ ${grant.provider || 'Unknown Provider'}
                 </div>
               </div>
-              <div class="match-badge ${matchClass}">
-                ${grant.match_score || 75}% Match
+              <div>
+                <div class="match-badge ${matchClass}">
+                  ${grant.match_score || 75}% Match
+                </div>
+                <div class="status-badges" style="margin-top: 10px;">
+                  ${isSaved ? '<span class="badge saved">⭐ Saved</span>' : ''}
+                  ${application ? `<span class="badge applied">✓ ${application.status.charAt(0).toUpperCase() + application.status.slice(1)}</span>` : ''}
+                </div>
               </div>
             </div>
             
@@ -531,10 +830,10 @@
               
               ${grant.deadline ? `
                 <div class="detail-item">
-                  <strong>📅 Application Deadline</strong>
+                  <strong>📅 Deadline</strong>
                   <div class="value">
                     ${formatDate(grant.deadline)}
-                    ${daysUntil ? `<br><span style="color: ${daysUntil <= 14 ? '#dc2626' : '#f59e0b'};">(${daysUntil} days remaining)</span>` : ''}
+                    ${daysUntil ? `<br><span style="color: ${daysUntil <= 14 ? '#dc2626' : '#f59e0b'};">(${daysUntil} days left)</span>` : ''}
                   </div>
                 </div>
               ` : ''}
@@ -545,24 +844,12 @@
                   <div class="value">${grant.eligibility}</div>
                 </div>
               ` : ''}
-              
-              ${grant.sector && grant.sector.length > 0 ? `
-                <div class="detail-item">
-                  <strong>🏢 Sectors</strong>
-                  <div class="value">${Array.isArray(grant.sector) ? grant.sector.join(', ') : grant.sector}</div>
-                </div>
-              ` : ''}
             </div>
             
-            ${grant.keywords && grant.keywords.length > 0 ? `
-              <div class="tags">
-                ${grant.keywords.map(keyword => `<span class="tag">${keyword}</span>`).join('')}
-              </div>
-            ` : ''}
-            
-            ${deadlineWarning ? `
-              <div class="deadline-warning ${deadlineUrgent ? 'deadline-urgent' : ''}">
-                ⚠️ ${deadlineUrgent ? 'URGENT:' : 'Reminder:'} Application deadline is ${daysUntil} days away!
+            ${application?.notes ? `
+              <div class="grant-notes">
+                <strong style="display: block; margin-bottom: 8px;">📝 Your Notes:</strong>
+                ${application.notes}
               </div>
             ` : ''}
             
@@ -572,11 +859,11 @@
                   Apply Now →
                 </a>
               ` : ''}
-              <button class="btn btn-secondary" onclick="saveGrant('${grant.grant_id}')">
-                ⭐ Save for Later
+              <button class="btn ${isSaved ? 'btn-warning active' : 'btn-secondary'}" onclick="toggleSave('${grant.grant_id}')">
+                ${isSaved ? '⭐ Saved' : '☆ Save'}
               </button>
-              <button class="btn btn-secondary" onclick="shareGrant('${grant.grant_id}')">
-                📤 Share
+              <button class="btn ${application ? 'btn-success' : 'btn-secondary'}" onclick="openApplicationModal('${grant.grant_id}')">
+                ${application ? '✓ Track Application' : '+ Track Application'}
               </button>
             </div>
           </div>
@@ -592,18 +879,23 @@
       const deadlineFilter = document.getElementById('deadlineFilter').value;
       const sortBy = document.getElementById('sortBy').value;
       
-      // Filter
-      filteredGrants = allGrants.filter(grant => {
-        // Search filter
+      // Filter by tab
+      let grants = allGrants;
+      if (currentTab === 'saved') {
+        grants = grants.filter(g => savedGrants.has(g.grant_id));
+      } else if (currentTab === 'applied') {
+        grants = grants.filter(g => appliedGrants.has(g.grant_id));
+      }
+      
+      // Apply other filters
+      filteredGrants = grants.filter(grant => {
         const searchMatch = !searchTerm || 
           (grant.grant_name?.toLowerCase().includes(searchTerm)) ||
           (grant.provider?.toLowerCase().includes(searchTerm)) ||
-          (grant.description?.toLowerCase().includes(searchTerm)) ||
-          (grant.keywords?.some(k => k.toLowerCase().includes(searchTerm)));
+          (grant.description?.toLowerCase().includes(searchTerm));
         
         if (!searchMatch) return false;
         
-        // Amount filter
         if (amountFilter !== 'all') {
           const max = grant.amount_max || 0;
           let amountMatch = false;
@@ -618,18 +910,15 @@
           if (!amountMatch) return false;
         }
         
-        // Deadline filter
         if (deadlineFilter !== 'all' && grant.deadline) {
           const days = getDaysUntilDeadline(grant.deadline);
           if (days) {
             let deadlineMatch = false;
-            
             switch(deadlineFilter) {
               case 'urgent': deadlineMatch = days <= 30; break;
               case 'soon': deadlineMatch = days <= 60; break;
               case 'later': deadlineMatch = days > 60; break;
             }
-            
             if (!deadlineMatch) return false;
           }
         }
@@ -670,6 +959,7 @@
         if (error) throw error;
         
         allGrants = grants || [];
+        await loadUserData();
         filteredGrants = [...allGrants];
         
         displayStats();
@@ -683,21 +973,16 @@
       }
     }
     
-    function saveGrant(grantId) {
-      alert('Save feature coming soon! Grant ID: ' + grantId);
-      // TODO: Implement save to favorites
-    }
-    
-    function shareGrant(grantId) {
-      alert('Share feature coming soon! Grant ID: ' + grantId);
-      // TODO: Implement sharing functionality
-    }
-    
     // Event listeners
     document.getElementById('searchInput').addEventListener('input', filterAndSortGrants);
     document.getElementById('amountFilter').addEventListener('change', filterAndSortGrants);
     document.getElementById('deadlineFilter').addEventListener('change', filterAndSortGrants);
     document.getElementById('sortBy').addEventListener('change', filterAndSortGrants);
+    
+    // Close modal on outside click
+    document.getElementById('applicationModal').addEventListener('click', (e) => {
+      if (e.target.id === 'applicationModal') closeModal();
+    });
     
     // Initialize
     if (!userId) {
