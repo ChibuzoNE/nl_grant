@@ -130,10 +130,10 @@
                    font-size: 16px;
                    font-weight: 600;
                    cursor: pointer;
-                   transition: transform 0.2s;
+                   transition: transform 0.2s, opacity 0.3s;
                }
                
-               .submit-btn:hover {
+               .submit-btn:hover:not(:disabled) {
                    transform: translateY(-2px);
                }
                
@@ -141,9 +141,9 @@
                    background: #ccc;
                    cursor: not-allowed;
                    transform: none;
+                   opacity: 0.6;
                }
                
-               /* NEW: Loading state styling */
                .loading-state {
                    display: none;
                    background: #e3f2fd;
@@ -209,50 +209,44 @@
                    margin-top: 5px;
                }
                
-               .grant-results {
-                   margin-top: 30px;
-                   padding: 20px;
-                   background: #f8f9fa;
-                   border-radius: 10px;
+               /* Submission lock indicator */
+               .submitting-overlay {
+                   position: fixed;
+                   top: 0;
+                   left: 0;
+                   right: 0;
+                   bottom: 0;
+                   background: rgba(0, 0, 0, 0.5);
                    display: none;
+                   justify-content: center;
+                   align-items: center;
+                   z-index: 1000;
                }
                
-               .grant-results.active {
-                   display: block;
+               .submitting-overlay.active {
+                   display: flex;
                }
                
-               .grant-card {
+               .submitting-message {
                    background: white;
-                   padding: 20px;
-                   border-radius: 8px;
-                   margin-bottom: 15px;
-                   border-left: 4px solid #667eea;
-               }
-               
-               .grant-card h4 {
-                   color: #333;
-                   margin-bottom: 10px;
-               }
-               
-               .grant-card p {
-                   color: #666;
-                   font-size: 14px;
-                   margin-bottom: 5px;
-               }
-               
-               .match-score {
-                   display: inline-block;
-                   background: #667eea;
-                   color: white;
-                   padding: 4px 12px;
+                   padding: 40px;
                    border-radius: 20px;
-                   font-size: 12px;
-                   font-weight: bold;
-                   margin-top: 10px;
+                   text-align: center;
+                   box-shadow: 0 10px 40px rgba(0,0,0,0.3);
                }
        </style>
 </head>
 <body>
+<!-- Submission overlay to prevent interaction during submit -->
+<div class="submitting-overlay" id="submittingOverlay">
+    <div class="submitting-message">
+        <div class="spinner"></div>
+        <h2 style="color: #667eea; margin-top: 20px;">Creating Your Profile...</h2>
+        <p style="color: #666; margin-top: 10px;">Please wait, this may take up to 60 seconds.</p>
+        <p style="color: #999; margin-top: 10px; font-size: 14px;">Do not close this window or click back.</p>
+    </div>
+</div>
+
 <div class="container">
     <div class="header">
         <h1>🎯 Create Your Grant Profile</h1>
@@ -461,155 +455,204 @@
             </div>
         </div>
         
-        <button type="submit" class="submit-btn">Create My Profile & Find Grants</button>
-        <div class="loading-state" id="loadingState">Searching...</div>
+        <button type="submit" class="submit-btn" id="submitBtn">Create My Profile & Find Grants</button>
+        <div class="loading-state" id="loadingState">
+            <div class="spinner"></div>
+            <p>Searching for grants that match your profile...</p>
+            <p style="font-size: 14px; margin-top: 10px; opacity: 0.8;">This may take 30-60 seconds. Please don't close this window.</p>
+        </div>
         <div class="success-message" id="successMessage"></div>
         <div class="error-message" id="errorMessage"></div>
-        <div class="grant-results" id="grantResults"></div>
     </form>
 </div>
 
 <script>
     const SUPABASE_URL = 'https://ofxqmfaqkagilxuzyuwx.supabase.co';
     const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Im9meHFtZmFxa2FnaWx4dXp5dXd4Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NjUyMTc1OTIsImV4cCI6MjA4MDc5MzU5Mn0.83xOQCVSHRMDY7_TqZ4vTL3S3Q_uj33ljZkNjBrdY3E';
-    const N8N_WEBHOOK_URL = 'https://richverra.app.n8n.cloud/webhook/profile-created';
+    const N8N_WEBHOOK_URL = 'https://richverra.app.n8n.cloud/webhook/user-signup';
     
     const { createClient } = window.supabase;
     const supabaseClient = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
     
-   document.getElementById('profileForm').addEventListener('submit', async (e) => {
-    e.preventDefault();
+    // ⭐ DOUBLE SUBMISSION PROTECTION
+    let isSubmitting = false;
+    let submissionStartTime = null;
     
-    const submitBtn = e.target.querySelector('.submit-btn');
-    const loadingState = document.getElementById('loadingState');
-    const successMsg = document.getElementById('successMessage');
-    const errorMsg = document.getElementById('errorMessage');
-    const grantResults = document.getElementById('grantResults');
-    
-    // Reset displays
-    submitBtn.disabled = true;
-    submitBtn.textContent = 'Saving profile and searching for grants...';
-    loadingState.classList.remove('active');
-    successMsg.classList.remove('active');
-    errorMsg.classList.remove('active');
-    grantResults.classList.remove('active');
-    
-    console.log('📝 Form submitted - starting process...');
-    
-    try {
-        // Get form data
-        const formData = new FormData(e.target);
+    document.getElementById('profileForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
         
-        // Get checkbox arrays
-        const secondary_sectors = Array.from(document.querySelectorAll('input[name="secondary_sectors"]:checked'))
-            .map(cb => cb.value);
-        const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked'))
-            .map(cb => cb.value);
-        
-        // Combine primary and secondary sectors
-        const allSectors = [formData.get('primary_sector'), ...secondary_sectors];
-        
-        // Build n8n webhook payload
-        const n8nPayload = {
-           body: {  // ← ADD THIS WRAPPER
-               email: formData.get('email'),
-               organization_name: formData.get('organization_name'),
-               contact_person: formData.get('contact_person') || '',  // ← Make sure this is here
-               phone: formData.get('phone') || '',
-               organization_type: formData.get('organization_type'),
-               num_employees: formData.get('num_employees'),
-               years_operation: formData.get('years_operation'),
-               location: formData.get('location'),
-               primary_sector: formData.get('primary_sector'),
-               secondary_sectors: secondary_sectors,
-               specific_interests: formData.get('specific_interests') || '',
-               preferred_grant_size: formData.get('preferred_grant_size'),
-               project_type: project_type,
-               urgency: formData.get('urgency'),
-               alert_frequency: formData.get('alert_frequency'),
-               notification_email: document.querySelector('input[name="notification_email"]').checked
-           }
-       };
-        
-        console.log('📦 Payload prepared:', n8nPayload);
-        
-        // Show loading state
-        loadingState.classList.add('active');
-        loadingState.scrollIntoView({ behavior: 'smooth' });
-        
-        // Call n8n webhook (n8n will save to Supabase)
-        console.log('🚀 Calling n8n webhook...');
-        console.log('🔗 Webhook URL:', N8N_WEBHOOK_URL);
-        
-        const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(n8nPayload)
-        });
-        
-        if (!webhookResponse.ok) {
-            console.warn('⚠️ Webhook responded with error:', webhookResponse.status);
-            throw new Error(`Grant search failed: ${webhookResponse.statusText}`);
+        // ⭐ PREVENT DOUBLE SUBMISSION
+        if (isSubmitting) {
+            console.log('⏸️ Submission already in progress. Ignoring duplicate request.');
+            alert('Your profile is already being created. Please wait...');
+            return;
         }
         
-        const result = await webhookResponse.json();
+        // Lock submissions
+        isSubmitting = true;
+        submissionStartTime = Date.now();
         
-        // Hide loading
+        const submitBtn = document.getElementById('submitBtn');
+        const loadingState = document.getElementById('loadingState');
+        const successMsg = document.getElementById('successMessage');
+        const errorMsg = document.getElementById('errorMessage');
+        const overlay = document.getElementById('submittingOverlay');
+        
+        // Reset UI
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Creating your profile...';
         loadingState.classList.remove('active');
+        successMsg.classList.remove('active');
+        errorMsg.classList.remove('active');
+        overlay.classList.add('active');
         
-        if (result.success) {
-            // Show success message
-            successMsg.classList.add('active');
+        console.log('📝 Form submitted - starting submission process...');
+        
+        try {
+            // Get form data
+            const formData = new FormData(e.target);
             
-            // Create success details HTML
-            const successHTML = `
-                <div id="successDetails">
-                    <strong>✅ Profile Created Successfully!</strong><br>
-                    <span>User ID: ${result.user_id || 'Generated'}</span><br>
-                    <span>We're searching for grants that match your profile. This takes about 60 seconds.</span><br>
-                    <a href="dashboard.html?user_id=${result.user_id}" 
-                       style="margin-top: 15px; display: inline-block; padding: 10px 20px; 
-                              background: #667eea; color: white; text-decoration: none; 
-                              border-radius: 5px;">
-                        View Your Dashboard
-                    </a>
-                </div>
-            `;
+            // Get checkbox arrays
+            const secondary_sectors = Array.from(document.querySelectorAll('input[name="secondary_sectors"]:checked'))
+                .map(cb => cb.value);
+            const project_type = Array.from(document.querySelectorAll('input[name="project_type"]:checked'))
+                .map(cb => cb.value);
             
-            successMsg.innerHTML = successHTML;
+            // Build n8n webhook payload (WITHOUT extra body wrapper)
+            const n8nPayload = {
+                email: formData.get('email'),
+                organization_name: formData.get('organization_name'),
+                contact_person: formData.get('contact_person') || '',
+                phone: formData.get('phone') || '',
+                organization_type: formData.get('organization_type'),
+                num_employees: formData.get('num_employees'),
+                years_operation: formData.get('years_operation'),
+                location: formData.get('location'),
+                primary_sector: formData.get('primary_sector'),
+                secondary_sectors: secondary_sectors,
+                specific_interests: formData.get('specific_interests') || '',
+                preferred_grant_size: formData.get('preferred_grant_size'),
+                project_type: project_type,
+                urgency: formData.get('urgency'),
+                alert_frequency: formData.get('alert_frequency'),
+                notification_email: document.querySelector('input[name="notification_email"]').checked
+            };
             
-            // Reset form
-            e.target.reset();
-            successMsg.scrollIntoView({ behavior: 'smooth' });
+            console.log('📦 Payload prepared');
+            console.log('🚀 Calling n8n webhook:', N8N_WEBHOOK_URL);
             
-        } else {
-            // No grants found, but profile created
-            console.log('⚠️ Profile created but no grants found yet');
+            // Show loading
+            loadingState.classList.add('active');
             
-            successMsg.classList.add('active');
-            successMsg.innerHTML = `
-                <strong>Profile created successfully!</strong><br>
-                <span style="font-size: 14px;">We didn't find any grants right now, but we'll keep searching and notify you when new opportunities appear. You'll receive an email at ${n8nPayload.email}.</span>
-            `;
-            successMsg.scrollIntoView({ behavior: 'smooth' });
+            // Call n8n webhook with timeout protection
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 minute timeout
+            
+            const webhookResponse = await fetch(N8N_WEBHOOK_URL, {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify(n8nPayload),
+                signal: controller.signal
+            });
+            
+            clearTimeout(timeoutId);
+            
+            if (!webhookResponse.ok) {
+                console.warn('⚠️ Webhook responded with error:', webhookResponse.status);
+                throw new Error(`Server error: ${webhookResponse.status} ${webhookResponse.statusText}`);
+            }
+            
+            const result = await webhookResponse.json();
+            
+            console.log('✅ Response received:', result);
+            
+            // Hide loading and overlay
+            loadingState.classList.remove('active');
+            overlay.classList.remove('active');
+            
+            if (result.success || result.user_id) {
+                // Show success message
+                successMsg.classList.add('active');
+                successMsg.innerHTML = `
+                    <div style="text-align: center;">
+                        <h2 style="color: #10b981; margin-bottom: 15px;">✅ Profile Created Successfully!</h2>
+                        <p style="margin-bottom: 10px;"><strong>User ID:</strong> ${result.user_id || 'Generated'}</p>
+                        <p style="margin-bottom: 20px;">We're searching for grants that match your profile. This takes about 60 seconds.</p>
+                        <a href="dashboard.html?user_id=${result.user_id}" 
+                           style="display: inline-block; padding: 12px 30px; background: #667eea; 
+                                  color: white; text-decoration: none; border-radius: 8px; 
+                                  font-weight: 600; margin-top: 10px;">
+                            View Your Dashboard →
+                        </a>
+                        <p style="margin-top: 15px; font-size: 14px; color: #666;">
+                            Grants will appear on your dashboard as they're discovered.
+                        </p>
+                    </div>
+                `;
+                
+                // Reset form
+                e.target.reset();
+                
+                // Scroll to success message
+                successMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                
+                console.log('✅ SUBMISSION COMPLETE!');
+                
+            } else {
+                throw new Error(result.message || 'Unknown error occurred');
+            }
+            
+        } catch (error) {
+            console.error('❌ Submission error:', error);
+            
+            // Hide loading and overlay
+            loadingState.classList.remove('active');
+            overlay.classList.remove('active');
+            
+            // Show error message
+            errorMsg.classList.add('active');
+            
+            if (error.name === 'AbortError') {
+                errorMsg.textContent = 'Request timed out. The server is taking too long to respond. Your profile might still be created. Please check your dashboard in a few minutes.';
+            } else {
+                errorMsg.textContent = `Error: ${error.message}. Please try again or contact support if the problem persists.`;
+            }
+            
+            errorMsg.scrollIntoView({ behavior: 'smooth', block: 'center' });
+            
+        } finally {
+            // ⭐ UNLOCK SUBMISSION AFTER DELAY
+            const elapsedTime = Date.now() - submissionStartTime;
+            const minimumDelay = 3000; // Minimum 3 seconds before allowing resubmission
+            const additionalDelay = Math.max(0, minimumDelay - elapsedTime);
+            
+            setTimeout(() => {
+                isSubmitting = false;
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'Create My Profile & Find Grants';
+                console.log('🔓 Submission lock released');
+            }, additionalDelay);
         }
-        
-        console.log('✅ PROCESS COMPLETE!');
-        
-    } catch (error) {
-        console.error('❌ Error occurred:', error);
-        
-        loadingState.classList.remove('active');
-        errorMsg.textContent = `Error: ${error.message}. Please try again or contact support.`;
-        errorMsg.classList.add('active');
-        errorMsg.scrollIntoView({ behavior: 'smooth' });
-        
-        submitBtn.disabled = false;
-        submitBtn.textContent = 'Create My Profile & Find Grants';
-    }
-});
-    </script>
+    });
+    
+    // Prevent form resubmission on browser back button
+    window.addEventListener('pageshow', function(event) {
+        if (event.persisted) {
+            isSubmitting = false;
+            document.getElementById('submitBtn').disabled = false;
+        }
+    });
+    
+    // Warn user if they try to leave during submission
+    window.addEventListener('beforeunload', function(e) {
+        if (isSubmitting) {
+            const confirmationMessage = 'Your profile is being created. Are you sure you want to leave?';
+            e.returnValue = confirmationMessage;
+            return confirmationMessage;
+        }
+    });
+</script>
 </body>
 </html>
